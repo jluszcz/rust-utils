@@ -47,8 +47,7 @@ fn parsed_rustc_version(rustc_version: &str) -> f64 {
         .collect::<Vec<_>>()
         .join(".");
 
-    let rustc_version = f64::from_str(&rustc_version);
-    rustc_version.unwrap_or(0.0)
+    f64::from_str(&rustc_version).unwrap_or(0.0)
 }
 
 pub async fn emit_rustc_metric<T>(app_name: T)
