@@ -40,21 +40,25 @@ where
     Ok(())
 }
 
+fn parsed_rustc_version(rustc_version: &str) -> f64 {
+    let rustc_version = rustc_version
+        .split('.')
+        .into_iter()
+        .take(2)
+        .collect::<Vec<_>>()
+        .join(".");
+
+    let rustc_version = f64::from_str(&rustc_version);
+    rustc_version.unwrap_or(0.0)
+}
+
 pub async fn emit_rustc_metric<T>(app_name: T)
 where
     T: Into<Cow<'static, str>>,
 {
-    let rustc_version = f64::from_str(RUSTC_VERSION);
-    if rustc_version.is_err() {
-        warn!("Failed to parse f64 from {RUSTC_VERSION}");
-        return;
-    }
-
-    let rustc_version = rustc_version.expect("rustc_version has been parsed");
-
     let datum = MetricDatum::builder()
         .metric_name("RustcVersion")
-        .value(rustc_version)
+        .value(parsed_rustc_version(RUSTC_VERSION))
         .unit(StandardUnit::Count)
         .build();
 
@@ -69,5 +73,20 @@ where
         .await
     {
         warn!("Failed to submit rustc metric: {err:?}");
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_parsed_rustc_version() {
+        assert_eq!(0.0, parsed_rustc_version("not-a-number"));
+        assert_eq!(0.0, parsed_rustc_version("0.0"));
+        assert_eq!(1.0, parsed_rustc_version("1.0"));
+        assert_eq!(1.0, parsed_rustc_version("1"));
+        assert_eq!(1.86, parsed_rustc_version("1.86"));
+        assert_eq!(1.86, parsed_rustc_version("1.86.0"));
     }
 }
