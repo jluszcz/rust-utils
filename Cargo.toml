@@ -9,6 +9,8 @@ rustc_version = "0.4"
 
 [dependencies]
 anyhow = "1.0"
+aws-config = { version = "1.*", features = ["behavior-version-latest"] }
+aws-sdk-cloudwatch = { version = "1.*", features = ["behavior-version-latest"] }
 chrono = "0.4"
 fern = "0.7"
 log = "0.4"
