@@ -1,0 +1,38 @@
+name: Build and Test
+
+on:
+  push:
+    branches:
+      - main
+
+    paths:
+      - '.github/workflows/**'
+      - 'Cargo**'
+      - 'src/**/*.rs'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update and Configure Rust
+        run: |
+          rustup update
+          rustup component add clippy
+
+      - name: Dump Toolchain Info
+        run: |
+          cargo --version --verbose
+          rustc --version
+          cargo clippy --version
+
+      - name: Build
+        run: cargo build
+
+      - name: Test
+        run: cargo test
+
+      - name: Lint
+        run: cargo clippy -- -D warnings
