@@ -43,7 +43,6 @@ where
 fn parsed_rustc_version(rustc_version: &str) -> f64 {
     let rustc_version = rustc_version
         .split('.')
-        .into_iter()
         .take(2)
         .collect::<Vec<_>>()
         .join(".");
