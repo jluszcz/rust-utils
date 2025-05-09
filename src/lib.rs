@@ -2,16 +2,28 @@ use anyhow::Result;
 use aws_config::ConfigLoader;
 use aws_sdk_cloudwatch::types::{MetricDatum, StandardUnit};
 use chrono::Utc;
-use log::{LevelFilter, info, warn};
+use log::{LevelFilter, warn};
 use std::borrow::Cow;
 use std::str::FromStr;
 
 const RUSTC_VERSION: &str = env!("RUSTC_VERSION");
 
-pub fn set_up_logger<T>(app_name: T, calling_module: T, verbose: bool) -> Result<()>
-where
-    T: Into<Cow<'static, str>>,
-{
+pub async fn lambda_init(
+    app_name: &'static str,
+    calling_module: &'static str,
+    verbose: bool,
+) -> Result<()> {
+    set_up_logger(app_name, calling_module, verbose)?;
+    emit_rustc_metric(app_name).await;
+
+    Ok(())
+}
+
+pub fn set_up_logger(
+    app_name: &'static str,
+    calling_module: &'static str,
+    verbose: bool,
+) -> Result<()> {
     let level = if verbose {
         LevelFilter::Debug
     } else {
@@ -34,8 +46,6 @@ where
         .level_for(calling_module, level)
         .chain(std::io::stdout())
         .apply();
-
-    info!("rustc: {RUSTC_VERSION}");
 
     Ok(())
 }
