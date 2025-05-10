@@ -27,7 +27,7 @@ fn parsed_rustc_version(rustc_version: &str) -> f64 {
     f64::from_str(&rustc_version).unwrap_or(0.0)
 }
 
-pub async fn emit_rustc_metric(app_name: &'static str) {
+async fn emit_rustc_metric(app_name: &'static str) {
     let datum = MetricDatum::builder()
         .metric_name("RustcVersion")
         .value(parsed_rustc_version(RUSTC_VERSION))
