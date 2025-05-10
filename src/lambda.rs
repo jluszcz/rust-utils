@@ -1,8 +1,8 @@
-use std::str::FromStr;
+use crate::set_up_logger;
 use aws_config::ConfigLoader;
 use aws_sdk_cloudwatch::types::{MetricDatum, StandardUnit};
 use log::warn;
-use crate::set_up_logger;
+use std::str::FromStr;
 
 const RUSTC_VERSION: &str = env!("RUSTC_VERSION");
 

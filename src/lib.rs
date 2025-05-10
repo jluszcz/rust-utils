@@ -1,7 +1,6 @@
 use anyhow::Result;
 use chrono::Utc;
-use log::{LevelFilter, warn};
-use std::str::FromStr;
+use log::LevelFilter;
 
 pub mod lambda;
 
