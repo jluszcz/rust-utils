@@ -12,13 +12,18 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
+
+    env:
+      BUILD_TARGET: aarch64-unknown-linux-musl
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Update and Configure Rust
         run: |
+          sudo apt-get install -y musl-tools
+          rustup target add ${{ env.BUILD_TARGET }}
           rustup update
           rustup component add clippy
 
@@ -29,10 +34,10 @@ jobs:
           cargo clippy --version
 
       - name: Build
-        run: cargo build
+        run: cargo build --target ${{ env.BUILD_TARGET }}
 
       - name: Test
-        run: cargo test
+        run: cargo test --target ${{ env.BUILD_TARGET }}
 
       - name: Lint
-        run: cargo clippy -- -D warnings
+        run: cargo clippy  --target ${{ env.BUILD_TARGET }} -- -D warnings

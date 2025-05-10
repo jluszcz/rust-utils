@@ -3,7 +3,6 @@ use aws_config::ConfigLoader;
 use aws_sdk_cloudwatch::types::{MetricDatum, StandardUnit};
 use chrono::Utc;
 use log::{LevelFilter, warn};
-use std::borrow::Cow;
 use std::str::FromStr;
 
 const RUSTC_VERSION: &str = env!("RUSTC_VERSION");
@@ -42,8 +41,8 @@ pub fn set_up_logger(
         })
         .level(LevelFilter::Warn)
         .level_for(app_name, level)
-        .level_for("lambda_utils", level)
         .level_for(calling_module, level)
+        .level_for("lambda_utils", level)
         .chain(std::io::stdout())
         .apply();
 
@@ -60,10 +59,7 @@ fn parsed_rustc_version(rustc_version: &str) -> f64 {
     f64::from_str(&rustc_version).unwrap_or(0.0)
 }
 
-pub async fn emit_rustc_metric<T>(app_name: T)
-where
-    T: Into<Cow<'static, str>>,
-{
+pub async fn emit_rustc_metric(app_name: &'static str) {
     let datum = MetricDatum::builder()
         .metric_name("RustcVersion")
         .value(parsed_rustc_version(RUSTC_VERSION))
@@ -75,7 +71,7 @@ where
 
     if let Err(err) = client
         .put_metric_data()
-        .namespace(app_name.into())
+        .namespace(app_name)
         .metric_data(datum)
         .send()
         .await
