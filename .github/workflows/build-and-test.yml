@@ -10,6 +10,10 @@ on:
       - 'Cargo**'
       - 'src/**/*.rs'
 
+  pull_request:
+    branches:
+      - main
+
 jobs:
   build-and-test:
     runs-on: ubuntu-24.04-arm
