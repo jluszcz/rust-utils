@@ -11,7 +11,7 @@ pub async fn init(
     calling_module: &'static str,
     verbose: bool,
 ) -> anyhow::Result<()> {
-    set_up_logger(app_name, calling_module, verbose)?;
+    set_up_logger(app_name, calling_module, verbose.into())?;
     emit_rustc_metric(app_name).await;
 
     Ok(())

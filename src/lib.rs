@@ -4,16 +4,48 @@ use log::LevelFilter;
 
 pub mod lambda;
 
+pub enum Verbosity {
+    Trace,
+    Debug,
+    Info
+}
+
+impl From<u8> for Verbosity {
+    fn from(value: u8) -> Self {
+        match value {
+            1 => Self::Debug,
+            2 => Self::Trace,
+            _ => Self::Info,
+        }
+    }
+}
+
+impl From<bool> for Verbosity {
+    fn from(value: bool) -> Self {
+        if value {
+            Self::Debug
+        } else {
+            Self::Info
+        }
+    }
+}
+
+impl From<Verbosity> for LevelFilter {
+    fn from(value: Verbosity) -> Self {
+        match value {
+            Verbosity::Trace => Self::Trace,
+            Verbosity::Debug => Self::Debug,
+            Verbosity::Info => Self::Info,
+        }
+    }
+}
+
 pub fn set_up_logger(
     app_name: &'static str,
     calling_module: &'static str,
-    verbose: bool,
+    verbosity: Verbosity
 ) -> Result<()> {
-    let level = if verbose {
-        LevelFilter::Debug
-    } else {
-        LevelFilter::Info
-    };
+    let level = verbosity.into();
 
     let _ = fern::Dispatch::new()
         .format(|out, message, record| {
