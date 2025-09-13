@@ -4,6 +4,7 @@ use log::LevelFilter;
 
 pub mod lambda;
 
+#[derive(Debug)]
 pub enum Verbosity {
     Trace,
     Debug,
