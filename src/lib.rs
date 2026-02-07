@@ -8,7 +8,7 @@ pub mod lambda;
 pub enum Verbosity {
     Trace,
     Debug,
-    Info
+    Info,
 }
 
 impl From<u8> for Verbosity {
@@ -23,11 +23,7 @@ impl From<u8> for Verbosity {
 
 impl From<bool> for Verbosity {
     fn from(value: bool) -> Self {
-        if value {
-            Self::Debug
-        } else {
-            Self::Info
-        }
+        if value { Self::Debug } else { Self::Info }
     }
 }
 
@@ -44,7 +40,7 @@ impl From<Verbosity> for LevelFilter {
 pub fn set_up_logger(
     app_name: &'static str,
     calling_module: &'static str,
-    verbosity: Verbosity
+    verbosity: Verbosity,
 ) -> Result<()> {
     let level = verbosity.into();
 
