@@ -72,3 +72,70 @@ async fn try_write_cache(use_cache: bool, cache_path: &Path, response: &str) -> 
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_cache_path(name: &str) -> PathBuf {
+        env::temp_dir().join(format!("jluszcz_rust_utils_test_{name}.json"))
+    }
+
+    #[test]
+    fn test_dated_cache_path_is_in_temp_dir() {
+        let path = dated_cache_path("app");
+        assert_eq!(path.parent().unwrap(), env::temp_dir());
+    }
+
+    #[test]
+    fn test_dated_cache_path_filename_format() {
+        let path = dated_cache_path("myapp");
+        let expected_date = Utc::now().date_naive().format("%Y%m%d").to_string();
+        assert_eq!(
+            path.file_name().unwrap().to_str().unwrap(),
+            format!("myapp.{expected_date}.json")
+        );
+    }
+
+    #[tokio::test]
+    async fn test_try_cached_query_cache_disabled_does_not_write_file() {
+        let path = test_cache_path("disabled");
+        let _ = std::fs::remove_file(&path);
+
+        let result = try_cached_query(false, &path, || async { Ok("data".to_string()) })
+            .await
+            .unwrap();
+
+        assert_eq!(result, "data");
+        assert!(!path.exists());
+    }
+
+    #[tokio::test]
+    async fn test_try_cached_query_miss_calls_query_and_writes_cache() {
+        let path = test_cache_path("miss");
+        let _ = std::fs::remove_file(&path);
+
+        let result = try_cached_query(true, &path, || async { Ok("fresh".to_string()) })
+            .await
+            .unwrap();
+
+        assert_eq!(result, "fresh");
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "fresh");
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[tokio::test]
+    async fn test_try_cached_query_hit_returns_cached_content() {
+        let path = test_cache_path("hit");
+        std::fs::write(&path, "cached").unwrap();
+
+        let result = try_cached_query(true, &path, || async {
+            Err(anyhow::anyhow!("should not be called"))
+        })
+        .await
+        .unwrap();
+
+        assert_eq!(result, "cached");
+        let _ = std::fs::remove_file(&path);
+    }
+}

@@ -64,3 +64,20 @@ where
 
     Ok(response)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_http_client_returns_ok() {
+        assert!(http_client().is_ok());
+    }
+
+    #[test]
+    fn test_http_client_is_singleton() {
+        let a = http_client().unwrap() as *const Client;
+        let b = http_client().unwrap() as *const Client;
+        assert_eq!(a, b);
+    }
+}
