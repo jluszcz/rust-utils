@@ -4,6 +4,12 @@ use log::LevelFilter;
 
 pub mod lambda;
 
+#[cfg(feature = "query")]
+pub mod query;
+
+#[cfg(feature = "cache")]
+pub mod cache;
+
 #[derive(Debug, Copy, Clone)]
 pub enum Verbosity {
     Trace,

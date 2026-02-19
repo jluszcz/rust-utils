@@ -7,6 +7,10 @@ edition = "2024"
 [build-dependencies]
 rustc_version = "0.4"
 
+[features]
+query = ["dep:again", "dep:reqwest", "dep:serde"]
+cache = ["dep:tokio"]
+
 [dependencies]
 anyhow = "1.0"
 aws-config = { version = "1.*", features = ["behavior-version-latest"] }
@@ -14,3 +18,7 @@ aws-sdk-cloudwatch = { version = "1.*", features = ["behavior-version-latest"] }
 chrono = "0.4"
 fern = "0.7"
 log = "0.4"
+again    = { version = "0.1",  optional = true }
+reqwest  = { version = "0.13", features = ["gzip", "json", "query"], optional = true }
+serde    = { version = "1.0",  features = ["derive"], optional = true }
+tokio    = { version = "1.*",  features = ["fs"], optional = true }
