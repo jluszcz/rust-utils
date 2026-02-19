@@ -14,7 +14,11 @@ use tokio::io::AsyncWriteExt;
 /// naturally expires the previous day's cache.
 pub fn dated_cache_path(name: &str) -> PathBuf {
     let mut path = env::temp_dir();
-    path.push(format!("{}.{}.json", name, Utc::now().date_naive().format("%Y%m%d")));
+    path.push(format!(
+        "{}.{}.json",
+        name,
+        Utc::now().date_naive().format("%Y%m%d")
+    ));
     path
 }
 
@@ -43,11 +47,9 @@ where
 async fn try_cached(use_cache: bool, cache_path: &Path) -> Result<Option<String>> {
     if use_cache && cache_path.exists() {
         debug!("Reading cache file: {cache_path:?}");
-        Ok(Some(
-            fs::read_to_string(cache_path)
-                .await
-                .with_context(|| format!("Failed to read cache file: {cache_path:?}"))?,
-        ))
+        Ok(Some(fs::read_to_string(cache_path).await.with_context(
+            || format!("Failed to read cache file: {cache_path:?}"),
+        )?))
     } else {
         Ok(None)
     }
