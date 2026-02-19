@@ -7,12 +7,21 @@ use std::path::{Path, PathBuf};
 use tokio::fs::{self, OpenOptions};
 use tokio::io::AsyncWriteExt;
 
+/// Returns a date-stamped cache path in the system temp directory.
+///
+/// The path has the form `$TMPDIR/<name>.YYYYMMDD.json`, where the date
+/// is today's UTC date. A new path is returned each calendar day, which
+/// naturally expires the previous day's cache.
 pub fn dated_cache_path(name: &str) -> PathBuf {
     let mut path = env::temp_dir();
     path.push(format!("{}.{}.json", name, Utc::now().date_naive().format("%Y%m%d")));
     path
 }
 
+/// Cache-aside helper: returns cached content if present, otherwise calls `query`,
+/// writes the result to `cache_path`, and returns it.
+///
+/// When `use_cache` is `false` the cache is bypassed entirely — no read or write occurs.
 pub async fn try_cached_query<F>(
     use_cache: bool,
     cache_path: &Path,
