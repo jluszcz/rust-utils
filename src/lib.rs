@@ -7,7 +7,7 @@ pub mod lambda;
 #[cfg(feature = "query")]
 pub mod query;
 
-#[cfg(feature = "cache")]
+#[cfg(feature = "query")]
 pub mod cache;
 
 #[derive(Debug, Copy, Clone)]
