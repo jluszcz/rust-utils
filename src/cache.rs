@@ -122,7 +122,16 @@ mod tests {
             .unwrap();
 
         assert_eq!(result, "fresh");
-        assert_eq!(std::fs::read_to_string(&path).unwrap(), "fresh");
+
+        // Verify the cache was populated: a second call should be a hit and
+        // not invoke the query function.
+        let cached = try_cached_query(true, &path, || async {
+            Err(anyhow::anyhow!("query should not be called on cache hit"))
+        })
+        .await
+        .unwrap();
+
+        assert_eq!(cached, "fresh");
         let _ = std::fs::remove_file(&path);
     }
 
