@@ -22,7 +22,7 @@ jobs:
       BUILD_TARGET: aarch64-unknown-linux-musl
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Update and Configure Rust
         run: |
