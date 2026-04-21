@@ -1,5 +1,5 @@
-use again::RetryPolicy;
 use anyhow::{Context, Result};
+use backon::{ExponentialBuilder, Retryable};
 use log::trace;
 use reqwest::{Client, Method};
 use serde::Serialize;
@@ -38,27 +38,29 @@ where
 {
     let client = http_client()?;
 
-    let retry_policy = RetryPolicy::exponential(Duration::from_millis(100))
-        .with_jitter(true)
-        .with_max_delay(Duration::from_secs(2))
-        .with_max_retries(3);
-
-    let response = retry_policy
-        .retry(|| {
-            client
-                .request(Method::GET, url)
-                .header("Accept", "application/json")
-                .header("Accept-Encoding", "gzip")
-                .query(params)
-                .send()
-        })
-        .await
-        .with_context(|| format!("Failed to make HTTP request to {url}"))?
-        .error_for_status()
-        .with_context(|| format!("HTTP request failed for {url}"))?
-        .text()
-        .await
-        .with_context(|| "Failed to read response body")?;
+    let response = (|| async {
+        client
+            .request(Method::GET, url)
+            .header("Accept", "application/json")
+            .header("Accept-Encoding", "gzip")
+            .query(params)
+            .send()
+            .await
+    })
+    .retry(
+        ExponentialBuilder::new()
+            .with_min_delay(Duration::from_millis(100))
+            .with_max_delay(Duration::from_secs(2))
+            .with_max_times(3)
+            .with_jitter(),
+    )
+    .await
+    .with_context(|| format!("Failed to make HTTP request to {url}"))?
+    .error_for_status()
+    .with_context(|| format!("HTTP request failed for {url}"))?
+    .text()
+    .await
+    .with_context(|| "Failed to read response body")?;
 
     trace!("{response}");
 
