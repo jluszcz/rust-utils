@@ -10,13 +10,13 @@ Common utilities for Rust Lambdas
 
 ### Logging (`set_up_logger`)
 
-Configures structured logging via `fern` with UTC timestamps in the format `YYYY-MM-DDTHH:MM:SS.mmmZ`. Accepts a `Verbosity` level (Info / Debug / Trace) and applies it to the app and calling module, while keeping other crates at `Warn`.
+Configures structured logging via `fern` with UTC timestamps in the format `YYYY-MM-DDTHH:MM:SS.mmmZ`. Accepts a `Verbosity` level (Info / Debug / Trace) and applies it to the app and calling module, while keeping other crates at `Warn`. Logs the rustc version (captured at build time via `build.rs`) at `info` once configured.
 
 `Verbosity` converts from `bool` (false → Info, true → Debug) or `u8` (0 → Info, 1 → Debug, 2+ → Trace).
 
 ### Lambda initialization (`lambda::init`)
 
-Async entry-point helper that calls `set_up_logger` and then emits a `RustcVersion` CloudWatch metric for the running binary. The rustc version is captured at build time via `build.rs`.
+Thin entry-point helper that calls `set_up_logger`. Accepts `impl Into<Verbosity>`, so callers can pass a `bool`, a `u8`, or a `Verbosity` directly.
 
 ### HTTP client (`query::http_client`) — feature `query`
 
@@ -27,18 +27,18 @@ Returns a shared singleton `reqwest::Client` configured with:
 
 ### HTTP GET with retry (`query::http_get`) — feature `query`
 
-Performs an authenticated HTTP GET with exponential-backoff retry (up to 3 attempts, 100ms base delay, 2s max, with jitter). Sets `Accept: application/json` and `Accept-Encoding: gzip` headers, serializes query parameters, and returns an error for non-2xx responses.
+Performs an HTTP GET with exponential-backoff retry (up to 3 attempts, 100ms base delay, 2s max, with jitter). Retries cover transport errors and transient HTTP responses (5xx, 429); other non-2xx responses are returned immediately as errors. Sets `Accept: application/json` and `Accept-Encoding: gzip` headers and serializes query parameters.
 
 ### File-based cache (`cache`) — feature `query`
 
 Two helpers for a simple cache-aside pattern backed by the filesystem:
 
 - **`dated_cache_path(name)`** — Returns a path in the system temp directory of the form `$TMPDIR/<name>.YYYYMMDD.json`. The date-stamped filename naturally expires the cache each calendar day.
-- **`try_cached_query(use_cache, cache_path, query)`** — Returns cached content if the file exists; otherwise calls the async `query` closure, writes the result to `cache_path`, and returns it. Set `use_cache = false` to bypass the cache entirely.
+- **`try_cached_query(mode, cache_path, query)`** — Returns cached content if the file exists; otherwise calls the async `query` closure, writes the result to `cache_path`, and returns it. Pass `CacheMode::Disabled` to bypass the cache entirely.
 
 ## Features
 
 | Feature | Adds |
 |---------|------|
-| *(default)* | Logging, Lambda init, CloudWatch metrics |
+| *(default)* | Logging, Lambda init |
 | `query` | HTTP client, HTTP GET with retry, file-based cache |

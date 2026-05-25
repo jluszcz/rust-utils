@@ -3,6 +3,9 @@ name = "jluszcz_rust_utils"
 authors = ["Jacob Luszcz"]
 version = "0.1.0"
 edition = "2024"
+description = "Common utilities for Jacob Luszcz's Rust Lambdas: logging setup, an HTTP GET helper with retry, and a simple file-based cache."
+license = "MIT"
+repository = "https://github.com/jluszcz/rust-utils"
 
 [build-dependencies]
 rustc_version = "0.4"
@@ -11,16 +14,14 @@ rustc_version = "0.4"
 query = ["dep:backon", "dep:reqwest", "dep:serde", "dep:tokio"]
 
 [dependencies]
-anyhow = "1.0"
-aws-config = { version = "1.*", features = ["behavior-version-latest"] }
-aws-sdk-cloudwatch = { version = "1.*", features = ["behavior-version-latest"] }
+anyhow = "1"
 chrono = "0.4"
 fern = "0.7"
 log = "0.4"
-backon   = { version = "1",    optional = true }
-reqwest  = { version = "0.13", features = ["gzip", "json", "query"], optional = true }
-serde    = { version = "1.0",  features = ["derive"], optional = true }
-tokio    = { version = "1.*",  features = ["fs"], optional = true }
+backon  = { version = "1",    optional = true }
+reqwest = { version = "0.13", features = ["gzip", "json", "query"], optional = true }
+serde   = { version = "1",    features = ["derive"], optional = true }
+tokio   = { version = "1",    features = ["fs"], optional = true }
 
 [dev-dependencies]
-tokio = { version = "1.*", features = ["macros", "rt"] }
+tokio = { version = "1", features = ["macros", "rt"] }

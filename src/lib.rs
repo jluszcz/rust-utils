@@ -1,6 +1,6 @@
 use anyhow::Result;
 use chrono::Utc;
-use log::LevelFilter;
+use log::{LevelFilter, info};
 
 pub mod lambda;
 
@@ -9,6 +9,8 @@ pub mod query;
 
 #[cfg(feature = "query")]
 pub mod cache;
+
+pub(crate) const RUSTC_VERSION: &str = env!("RUSTC_VERSION");
 
 #[derive(Debug, Copy, Clone)]
 pub enum Verbosity {
@@ -20,9 +22,9 @@ pub enum Verbosity {
 impl From<u8> for Verbosity {
     fn from(value: u8) -> Self {
         match value {
+            0 => Self::Info,
             1 => Self::Debug,
-            2 => Self::Trace,
-            _ => Self::Info,
+            _ => Self::Trace,
         }
     }
 }
@@ -63,9 +65,11 @@ pub fn set_up_logger(
         .level(LevelFilter::Warn)
         .level_for(app_name, level)
         .level_for(calling_module, level)
-        .level_for("lambda_utils", level)
+        .level_for("jluszcz_rust_utils", level)
         .chain(std::io::stdout())
         .apply();
+
+    info!("rustc version: {RUSTC_VERSION}");
 
     Ok(())
 }

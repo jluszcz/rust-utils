@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use backon::{ExponentialBuilder, Retryable};
 use log::trace;
-use reqwest::{Client, Method};
+use reqwest::{Client, Error as ReqwestError, Method, StatusCode};
 use serde::Serialize;
 use std::sync::OnceLock;
 use std::time::Duration;
@@ -27,11 +27,19 @@ pub fn http_client() -> Result<&'static Client> {
     Ok(HTTP_CLIENT.get_or_init(|| client))
 }
 
+fn is_transient(err: &ReqwestError) -> bool {
+    match err.status() {
+        Some(status) => status.is_server_error() || status == StatusCode::TOO_MANY_REQUESTS,
+        None => true,
+    }
+}
+
 /// Performs an HTTP GET request with exponential-backoff retry.
 ///
 /// Retries up to 3 times with 100ms base delay, 2s max delay, and jitter.
-/// Sets `Accept: application/json` and `Accept-Encoding: gzip` headers,
-/// and returns an error for non-2xx responses.
+/// Retries cover transport errors and transient HTTP responses (5xx, 429);
+/// other non-2xx responses are returned immediately as errors. Sets
+/// `Accept: application/json` and `Accept-Encoding: gzip` headers.
 pub async fn http_get<T>(url: &str, params: &T) -> Result<String>
 where
     T: Serialize + ?Sized,
@@ -45,7 +53,8 @@ where
             .header("Accept-Encoding", "gzip")
             .query(params)
             .send()
-            .await
+            .await?
+            .error_for_status()
     })
     .retry(
         ExponentialBuilder::new()
@@ -54,9 +63,8 @@ where
             .with_max_times(3)
             .with_jitter(),
     )
+    .when(is_transient)
     .await
-    .with_context(|| format!("Failed to make HTTP request to {url}"))?
-    .error_for_status()
     .with_context(|| format!("HTTP request failed for {url}"))?
     .text()
     .await
