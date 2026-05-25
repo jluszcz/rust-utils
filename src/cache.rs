@@ -20,6 +20,12 @@ impl CacheMode {
     }
 }
 
+impl From<bool> for CacheMode {
+    fn from(value: bool) -> Self {
+        if value { Self::Enabled } else { Self::Disabled }
+    }
+}
+
 /// Returns a date-stamped cache path in the system temp directory.
 ///
 /// The path has the form `$TMPDIR/<name>.YYYYMMDD.json`, where the date
