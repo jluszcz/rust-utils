@@ -7,6 +7,19 @@ use std::path::{Path, PathBuf};
 use tokio::fs::{self, OpenOptions};
 use tokio::io::AsyncWriteExt;
 
+/// Whether [`try_cached_query`] should consult and populate the on-disk cache.
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum CacheMode {
+    Enabled,
+    Disabled,
+}
+
+impl CacheMode {
+    fn is_enabled(self) -> bool {
+        matches!(self, Self::Enabled)
+    }
+}
+
 /// Returns a date-stamped cache path in the system temp directory.
 ///
 /// The path has the form `$TMPDIR/<name>.YYYYMMDD.json`, where the date
@@ -25,27 +38,27 @@ pub fn dated_cache_path(name: &str) -> PathBuf {
 /// Cache-aside helper: returns cached content if present, otherwise calls `query`,
 /// writes the result to `cache_path`, and returns it.
 ///
-/// When `use_cache` is `false` the cache is bypassed entirely — no read or write occurs.
+/// When `mode` is [`CacheMode::Disabled`] the cache is bypassed entirely — no read or write occurs.
 pub async fn try_cached_query<F>(
-    use_cache: bool,
+    mode: CacheMode,
     cache_path: &Path,
     query: impl Fn() -> F,
 ) -> Result<String>
 where
     F: Future<Output = Result<String>>,
 {
-    match try_cached(use_cache, cache_path).await? {
+    match try_cached(mode, cache_path).await? {
         Some(cached) => Ok(cached),
         None => {
             let response = query().await?;
-            try_write_cache(use_cache, cache_path, &response).await?;
+            try_write_cache(mode, cache_path, &response).await?;
             Ok(response)
         }
     }
 }
 
-async fn try_cached(use_cache: bool, cache_path: &Path) -> Result<Option<String>> {
-    if use_cache && cache_path.exists() {
+async fn try_cached(mode: CacheMode, cache_path: &Path) -> Result<Option<String>> {
+    if mode.is_enabled() && cache_path.exists() {
         debug!("Reading cache file: {cache_path:?}");
         Ok(Some(fs::read_to_string(cache_path).await.with_context(
             || format!("Failed to read cache file: {cache_path:?}"),
@@ -55,8 +68,8 @@ async fn try_cached(use_cache: bool, cache_path: &Path) -> Result<Option<String>
     }
 }
 
-async fn try_write_cache(use_cache: bool, cache_path: &Path, response: &str) -> Result<()> {
-    if use_cache {
+async fn try_write_cache(mode: CacheMode, cache_path: &Path, response: &str) -> Result<()> {
+    if mode.is_enabled() {
         debug!("Writing response to cache file: {cache_path:?}");
 
         let mut file = OpenOptions::new()
@@ -104,9 +117,11 @@ mod tests {
         let path = test_cache_path("disabled");
         let _ = std::fs::remove_file(&path);
 
-        let result = try_cached_query(false, &path, || async { Ok("data".to_string()) })
-            .await
-            .unwrap();
+        let result = try_cached_query(CacheMode::Disabled, &path, || async {
+            Ok("data".to_string())
+        })
+        .await
+        .unwrap();
 
         assert_eq!(result, "data");
         assert!(!path.exists());
@@ -117,15 +132,17 @@ mod tests {
         let path = test_cache_path("miss");
         let _ = std::fs::remove_file(&path);
 
-        let result = try_cached_query(true, &path, || async { Ok("fresh".to_string()) })
-            .await
-            .unwrap();
+        let result = try_cached_query(CacheMode::Enabled, &path, || async {
+            Ok("fresh".to_string())
+        })
+        .await
+        .unwrap();
 
         assert_eq!(result, "fresh");
 
         // Verify the cache was populated: a second call should be a hit and
         // not invoke the query function.
-        let cached = try_cached_query(true, &path, || async {
+        let cached = try_cached_query(CacheMode::Enabled, &path, || async {
             Err(anyhow::anyhow!("query should not be called on cache hit"))
         })
         .await
@@ -140,7 +157,7 @@ mod tests {
         let path = test_cache_path("hit");
         std::fs::write(&path, "cached").unwrap();
 
-        let result = try_cached_query(true, &path, || async {
+        let result = try_cached_query(CacheMode::Enabled, &path, || async {
             Err(anyhow::anyhow!("should not be called"))
         })
         .await
