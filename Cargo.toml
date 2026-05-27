@@ -8,18 +8,18 @@ license = "MIT"
 repository = "https://github.com/jluszcz/rust-utils"
 
 [build-dependencies]
-rustc_version = "0.4"
+rustc_version = "0"
 
 [features]
 query = ["dep:backon", "dep:reqwest", "dep:serde", "dep:tokio"]
 
 [dependencies]
 anyhow = "1"
-chrono = "0.4"
-fern = "0.7"
-log = "0.4"
+chrono = "0"
+fern = "0"
+log = "0"
 backon  = { version = "1",    optional = true }
-reqwest = { version = "0.13", features = ["gzip", "json", "query"], optional = true }
+reqwest = { version = "0", features = ["gzip", "json", "query"], optional = true }
 serde   = { version = "1",    features = ["derive"], optional = true }
 tokio   = { version = "1",    features = ["fs"], optional = true }
 
