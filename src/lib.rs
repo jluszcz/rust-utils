@@ -48,9 +48,9 @@ impl From<Verbosity> for LevelFilter {
 pub fn set_up_logger(
     app_name: &'static str,
     calling_module: &'static str,
-    verbosity: Verbosity,
+    verbosity: impl Into<Verbosity>,
 ) -> Result<()> {
-    let level = verbosity.into();
+    let level = LevelFilter::from(verbosity.into());
 
     let _ = fern::Dispatch::new()
         .format(|out, message, record| {
@@ -65,7 +65,7 @@ pub fn set_up_logger(
         .level(LevelFilter::Warn)
         .level_for(app_name, level)
         .level_for(calling_module, level)
-        .level_for("jluszcz_rust_utils", level)
+        .level_for(env!("CARGO_CRATE_NAME"), level)
         .chain(std::io::stdout())
         .apply();
 

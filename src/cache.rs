@@ -3,9 +3,9 @@ use chrono::Utc;
 use log::debug;
 use std::env;
 use std::future::Future;
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
-use tokio::fs::{self, OpenOptions};
-use tokio::io::AsyncWriteExt;
+use tokio::fs;
 
 /// Whether [`try_cached_query`] should consult and populate the on-disk cache.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -64,13 +64,17 @@ where
 }
 
 async fn try_cached(mode: CacheMode, cache_path: &Path) -> Result<Option<String>> {
-    if mode.is_enabled() && cache_path.exists() {
-        debug!("Reading cache file: {cache_path:?}");
-        Ok(Some(fs::read_to_string(cache_path).await.with_context(
-            || format!("Failed to read cache file: {cache_path:?}"),
-        )?))
-    } else {
-        Ok(None)
+    if !mode.is_enabled() {
+        return Ok(None);
+    }
+
+    match fs::read_to_string(cache_path).await {
+        Ok(cached) => {
+            debug!("Read cache file: {cache_path:?}");
+            Ok(Some(cached))
+        }
+        Err(e) if e.kind() == ErrorKind::NotFound => Ok(None),
+        Err(e) => Err(e).with_context(|| format!("Failed to read cache file: {cache_path:?}")),
     }
 }
 
@@ -78,17 +82,9 @@ async fn try_write_cache(mode: CacheMode, cache_path: &Path, response: &str) -> 
     if mode.is_enabled() {
         debug!("Writing response to cache file: {cache_path:?}");
 
-        let mut file = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open(cache_path)
+        fs::write(cache_path, response)
             .await
-            .with_context(|| format!("Failed to create or open cache file: {cache_path:?}"))?;
-
-        file.write_all(response.as_bytes())
-            .await
-            .with_context(|| format!("Failed to write data to cache file: {cache_path:?}"))?;
+            .with_context(|| format!("Failed to write cache file: {cache_path:?}"))?;
     }
 
     Ok(())

@@ -10,7 +10,7 @@ Common utilities for Rust Lambdas
 
 ### Logging (`set_up_logger`)
 
-Configures structured logging via `fern` with UTC timestamps in the format `YYYY-MM-DDTHH:MM:SS.mmmZ`. Accepts a `Verbosity` level (Info / Debug / Trace) and applies it to the app and calling module, while keeping other crates at `Warn`. Logs the rustc version (captured at build time via `build.rs`) at `info` once configured.
+Configures structured logging via `fern` with UTC timestamps in the format `YYYY-MM-DDTHH:MM:SS.mmmZ`. Accepts `impl Into<Verbosity>` (Info / Debug / Trace) and applies it to the app and calling module, while keeping other crates at `Warn`. Logs the rustc version (captured at build time via `build.rs`) at `info` once configured.
 
 `Verbosity` converts from `bool` (false → Info, true → Debug) or `u8` (0 → Info, 1 → Debug, 2+ → Trace).
 
