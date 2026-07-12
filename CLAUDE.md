@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `cargo build` - Build the library
 - `cargo test` - Run all tests
 - `cargo fmt --check` - Check formatting (same as CI)
-- `cargo clippy --all-targets --all-features -- -D warnings` - Run linter with warnings as errors (same as CI)
+- `cargo clippy --all-targets --all-features -- -D warnings` - Run linter with warnings as errors
 
 ### Production Build
 - `cargo build --target aarch64-unknown-linux-musl --all-features` - Build for ARM64 Linux (Lambda target)
