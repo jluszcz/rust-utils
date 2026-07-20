@@ -4,6 +4,12 @@ on:
   pull_request_review_comment: { types: [created] }
   issues: { types: [opened, assigned] }
   pull_request_review: { types: [submitted] }
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+  id-token: write
+  actions: read
 jobs:
   claude:
     uses: jluszcz/github-utils/.github/workflows/claude.yml@v1
