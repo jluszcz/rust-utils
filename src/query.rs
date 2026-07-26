@@ -1,3 +1,6 @@
+//! HTTP query helpers: a shared client, retries with exponential backoff, and
+//! typed JSON responses.
+
 use anyhow::{Context, Result};
 use backon::{ExponentialBuilder, Retryable};
 use log::trace;
