@@ -1,3 +1,9 @@
+//! An on-disk cache for query responses, keyed by date.
+//!
+//! Intended for data that changes at most daily and is expensive or rate-limited
+//! to fetch — the cache file lives in the system temp directory, so it survives
+//! repeated runs on one machine but nothing more.
+
 use anyhow::{Context, Result};
 use chrono::Utc;
 use log::debug;
@@ -10,7 +16,10 @@ use tokio::fs;
 /// Whether [`try_cached_query`] should consult and populate the on-disk cache.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum CacheMode {
+    /// Read from the cache when it holds today's data, and write to it after a
+    /// successful query.
     Enabled,
+    /// Always query, and leave the cache untouched.
     Disabled,
 }
 
