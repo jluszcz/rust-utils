@@ -54,6 +54,6 @@ This is a Rust utilities library (`jluszcz_rust_utils`) designed for AWS Lambda 
 
 ### Testing
 - Unit tests in `cache.rs` and `query.rs` modules
-- CI is a thin caller of `jluszcz/github-utils/.github/workflows/rust-ci.yml@v1` (`.github/workflows/ci.yml`), which
+- CI is a thin caller of `jluszcz/github-utils/.github/workflows/rust-ci.yml` (`.github/workflows/ci.yml`), which
   runs build, test, `cargo fmt --check`, and `cargo clippy -- -D warnings` on `ubuntu-24.04-arm` with `--all-features`.
   The steps live in that shared workflow, not in this repo.
