@@ -41,7 +41,7 @@ This is a Rust utilities library (`jluszcz_rust_utils`) designed for AWS Lambda 
 
 ### Documentation
 - `src/lib.rs` sets `#![warn(missing_docs)]`, and CI lints with `-D warnings`, so **every new public item needs a doc
-  comment or the build fails**. This is deliberate: the crate is consumed by five sibling repos whose authors read
+  comment or the build fails**. This is deliberate: the crate is consumed by sibling repos whose authors read
   rustdoc rather than the source.
 - Document the *why* a caller can't infer: `set_up_logger` caps dependencies at `Warn` so verbosity doesn't bury the
   application's own output; `lambda::init` is `async` and fallible for future headroom rather than present need.
@@ -50,7 +50,7 @@ This is a Rust utilities library (`jluszcz_rust_utils`) designed for AWS Lambda 
 ### Dependency Versioning
 - Pin 0.x dependencies to their **minor** version (`chrono = "0.4"`, not `chrono = "0"`). For 0.x crates the minor
   version is the breaking axis, so a bare `"0"` resolves to `<1.0.0` and lets breaking releases through silently.
-- Five sibling repos consume this crate as an unpinned git dependency, so a break here fans out to all of them.
+- Sibling repos consume this crate as an unpinned git dependency, so a break here fans out to all of them.
 
 ### Testing
 - Unit tests in `cache.rs` and `query.rs` modules
