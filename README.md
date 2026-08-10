@@ -49,6 +49,12 @@ A flattenable clap argument providing the repeatable `-v` flag, converting into 
 
 Loads the ambient AWS configuration with `BehaviorVersion::latest()` and a standard retry policy (3 attempts; `aws::config_with_max_attempts` raises it for long batch work). Takes an optional region override, for CLIs that accept `--region`; pass `None` in a Lambda to accept the ambient one. The SDK applies no retries unless asked, which is the reason to route configuration through here.
 
+### Bedrock text generation (`bedrock::BedrockClient`) — feature `bedrock`
+
+Sends a single-turn prompt through the Bedrock Converse API and returns the model's reply verbatim. The model is `us.amazon.nova-2-lite-v1:0` unless `BEDROCK_MODEL_ID` overrides it.
+
+Prompt construction and cleanup of the reply stay with the caller — those are the parts that differ per application. Construct with `from_env`, or `from_env_if_credentialed` to get `None` rather than per-call failures on a machine without AWS credentials. `generate_with_timeout` bounds the call for callers on a deadline of their own.
+
 ## Features
 
 | Feature | Adds |
@@ -57,3 +63,4 @@ Loads the ambient AWS configuration with `BehaviorVersion::latest()` and a stand
 | `query` | HTTP client, HTTP GET with retry, file-based cache |
 | `cli` | Shared clap verbosity argument |
 | `aws` | Shared AWS SDK configuration |
+| `bedrock` | Bedrock Converse client (implies `aws`) |

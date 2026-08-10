@@ -12,6 +12,9 @@ pub mod lambda;
 #[cfg(feature = "aws")]
 pub mod aws;
 
+#[cfg(feature = "bedrock")]
+pub mod bedrock;
+
 #[cfg(feature = "cli")]
 pub mod cli;
 

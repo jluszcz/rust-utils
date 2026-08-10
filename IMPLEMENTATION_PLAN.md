@@ -51,8 +51,9 @@ dependency, rather than pulling `aws-credential-types` in here for one call.
 `generate_with_timeout`. Prompt and post-processing stay with the caller.
 **Success Criteria**: `cargo test --features bedrock` passes.
 **Tests**: model id resolution (`BEDROCK_MODEL_ID` override vs default); response extraction from a
-constructed `ConverseOutput`; timeout returns an error rather than hanging.
-**Status**: Not Started
+constructed `ConverseOutput`, including a non-text leading block; timeout returns an error naming
+the budget it exceeded.
+**Status**: Complete
 
 ## Stage 5: `lambda` feature
 
