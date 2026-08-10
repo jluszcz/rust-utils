@@ -9,7 +9,11 @@ use clap::Args;
 /// Flattening rather than exposing a bare `u8` keeps the help text identical
 /// across binaries, which is the thing that actually drifted when each one
 /// declared its own copy.
+// clap derives the host command's `about` from a flattened struct's doc
+// comment, so without this the rustdoc above lands at the top of every
+// consuming binary's `--help` output.
 #[derive(Debug, Copy, Clone, Args)]
+#[command(about = None, long_about = None)]
 pub struct VerbosityArgs {
     /// Increase verbosity (-v for debug, -vv for trace).
     #[arg(short = 'v', action = clap::ArgAction::Count)]
@@ -25,12 +29,30 @@ impl From<VerbosityArgs> for Verbosity {
 #[cfg(test)]
 mod tests {
     use crate::{Verbosity, cli::VerbosityArgs};
-    use clap::Parser;
+    use clap::{CommandFactory, Parser};
 
     #[derive(Debug, Parser)]
     struct TestArgs {
         #[command(flatten)]
         verbosity: VerbosityArgs,
+    }
+
+    #[test]
+    fn test_flattening_leaves_the_host_commands_description_alone() {
+        let help = TestArgs::command().render_long_help().to_string();
+
+        // clap takes a flattened struct's doc comment as the host command's
+        // `about` unless told not to, which put this crate's rustdoc at the top
+        // of every consuming binary's --help.
+        assert!(!help.contains("Flattening rather than"), "{help}");
+        assert!(help.starts_with("Usage:"), "{help}");
+    }
+
+    #[test]
+    fn test_the_flag_still_documents_itself() {
+        let help = TestArgs::command().render_long_help().to_string();
+
+        assert!(help.contains("Increase verbosity"), "{help}");
     }
 
     fn verbosity_from(args: &[&str]) -> Verbosity {
