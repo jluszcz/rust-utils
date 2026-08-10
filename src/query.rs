@@ -152,12 +152,14 @@ fn is_idempotent(method: &Method) -> bool {
 /// idempotency key, say — should drive [`http_client`] and this crate's retry
 /// policy itself rather than reaching for a blanket opt-out here.
 pub async fn send(request: RequestBuilder) -> Result<Response> {
-    let replayable = request
+    // Both conditions in one: a replayable body *and* a method that's safe to
+    // repeat.
+    let retryable = request
         .try_clone()
         .and_then(|attempt| attempt.build().ok())
         .is_some_and(|built| is_idempotent(built.method()));
 
-    if !replayable {
+    if !retryable {
         return Ok(send_once(request).await?);
     }
 
@@ -375,6 +377,27 @@ mod tests {
         let a = http_client().unwrap() as *const Client;
         let b = http_client().unwrap() as *const Client;
         assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_idempotent_methods_are_retryable() {
+        for method in [
+            Method::GET,
+            Method::HEAD,
+            Method::PUT,
+            Method::DELETE,
+            Method::OPTIONS,
+            Method::TRACE,
+        ] {
+            assert!(is_idempotent(&method), "{method} should be retryable");
+        }
+    }
+
+    #[test]
+    fn test_write_methods_are_not_retryable() {
+        for method in [Method::POST, Method::PATCH] {
+            assert!(!is_idempotent(&method), "{method} should not be retryable");
+        }
     }
 
     #[test]
