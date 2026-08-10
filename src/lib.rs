@@ -9,11 +9,23 @@ use log::{LevelFilter, info};
 
 pub mod lambda;
 
+#[cfg(feature = "aws")]
+pub mod aws;
+
+#[cfg(feature = "bedrock")]
+pub mod bedrock;
+
+#[cfg(feature = "cli")]
+pub mod cli;
+
 #[cfg(feature = "query")]
 pub mod query;
 
 #[cfg(feature = "query")]
 pub mod cache;
+
+#[cfg(feature = "tls")]
+pub mod tls;
 
 pub(crate) const RUSTC_VERSION: &str = env!("RUSTC_VERSION");
 

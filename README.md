@@ -18,6 +18,21 @@ Configures structured logging via `fern` with UTC timestamps in the format `YYYY
 
 Thin entry-point helper that calls `set_up_logger`. Accepts `impl Into<Verbosity>`, so callers can pass a `bool`, a `u8`, or a `Verbosity` directly.
 
+### Lambda entry point (`lambda::run`) — feature `lambda`
+
+Replaces the `main` each Lambda binary writes by hand: installs the `rustls` crypto provider, sets up logging once at cold start, and serves the handler until the runtime shuts down. The handler is any `Fn(LambdaEvent<T>) -> Future<Output = Result<R, lambda_runtime::Error>>` with `T: DeserializeOwned` and `R: Serialize`.
+
+```rust,ignore
+#[tokio::main]
+async fn main() -> Result<(), lambda_runtime::Error> {
+    lambda::run(APP_NAME, module_path!(), false, function).await
+}
+```
+
+### TLS provider (`tls::install_default_provider`) — feature `tls`
+
+Installs `aws-lc-rs` as the process-wide `rustls` crypto provider, which otherwise fails on the first HTTPS request rather than at build time. Idempotent. `lambda::run` calls it (the `lambda` feature implies `tls`); non-Lambda binaries call it at the top of `main`.
+
 ### HTTP client (`query::http_client`) — feature `query`
 
 Returns a shared singleton `reqwest::Client` configured with:
@@ -25,9 +40,13 @@ Returns a shared singleton `reqwest::Client` configured with:
 - 90s pool idle timeout, max 10 idle connections per host
 - gzip decompression enabled
 
+### Request with retry (`query::send`) — feature `query`
+
+Sends any `reqwest::RequestBuilder` with exponential-backoff retry (up to 3 attempts, 100ms base delay, 2s max, with jitter). Retries cover transport errors and transient HTTP responses (5xx, 429); other non-2xx responses are returned immediately. Either way the error carries the response body (truncated to 1 KiB), which `reqwest`'s own `error_for_status` discards. Requests whose body can't be replayed are sent exactly once.
+
 ### HTTP GET with retry (`query::http_get`) — feature `query`
 
-Performs an HTTP GET with exponential-backoff retry (up to 3 attempts, 100ms base delay, 2s max, with jitter). Retries cover transport errors and transient HTTP responses (5xx, 429); other non-2xx responses are returned immediately as errors. Sets `Accept: application/json` and `Accept-Encoding: gzip` headers and serializes query parameters.
+`send` for a GET, setting `Accept: application/json` and `Accept-Encoding: gzip` headers and serializing query parameters. `query::http_get_json` adds deserialization into a caller-supplied type.
 
 ### File-based cache (`cache`) — feature `query`
 
@@ -35,6 +54,21 @@ Two helpers for a simple cache-aside pattern backed by the filesystem:
 
 - **`dated_cache_path(name)`** — Returns a path in the system temp directory of the form `$TMPDIR/<name>.YYYYMMDD.json`. The date-stamped filename naturally expires the cache each calendar day.
 - **`try_cached_query(mode, cache_path, query)`** — Returns cached content if the file exists; otherwise calls the async `query` closure, writes the result to `cache_path`, and returns it. Pass `CacheMode::Disabled` to bypass the cache entirely.
+- **`try_cached_query_json(mode, cache_path, query)`** — The same, deserialized into a caller-supplied type. The cache still stores the raw text, so changing the type doesn't invalidate existing cache files.
+
+### Verbosity flag (`cli::VerbosityArgs`) — feature `cli`
+
+A flattenable clap argument providing the repeatable `-v` flag, converting into `Verbosity` (absent → Info, `-v` → Debug, `-vv` or more → Trace). Flatten it into an application's own `Parser` struct with `#[command(flatten)]` so every binary shares one spelling and one help string.
+
+### AWS configuration (`aws::config`) — feature `aws`
+
+Loads the ambient AWS configuration with `BehaviorVersion::latest()` and a standard retry policy (3 attempts; `aws::config_with_max_attempts` raises it for long batch work). Takes an optional region override, for CLIs that accept `--region`; pass `None` in a Lambda to accept the ambient one. The SDK applies no retries unless asked, which is the reason to route configuration through here.
+
+### Bedrock text generation (`bedrock::BedrockClient`) — feature `bedrock`
+
+Sends a single-turn prompt through the Bedrock Converse API and returns the model's reply verbatim. The model is `us.amazon.nova-2-lite-v1:0` unless `BEDROCK_MODEL_ID` overrides it.
+
+Prompt construction and cleanup of the reply stay with the caller — those are the parts that differ per application. Construct with `from_env`, or `from_env_if_credentialed` to get `None` rather than per-call failures on a machine without AWS credentials. `generate_with_timeout` bounds the call for callers on a deadline of their own.
 
 ## Features
 
@@ -42,3 +76,8 @@ Two helpers for a simple cache-aside pattern backed by the filesystem:
 |---------|------|
 | *(default)* | Logging, Lambda init |
 | `query` | HTTP client, HTTP GET with retry, file-based cache |
+| `cli` | Shared clap verbosity argument |
+| `aws` | Shared AWS SDK configuration |
+| `bedrock` | Bedrock Converse client (implies `aws`) |
+| `tls` | `rustls` crypto provider installation |
+| `lambda` | Lambda entry point (implies `tls`) |

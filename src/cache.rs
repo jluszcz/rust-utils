@@ -7,6 +7,7 @@
 use anyhow::{Context, Result};
 use chrono::Utc;
 use log::debug;
+use serde::de::DeserializeOwned;
 use std::env;
 use std::future::Future;
 use std::io::ErrorKind;
@@ -72,6 +73,29 @@ where
     }
 }
 
+/// [`try_cached_query`] followed by JSON deserialization into `T`.
+///
+/// The cache still holds the raw response text, not `T` — so a change to `T`
+/// doesn't invalidate cache files, and the cached bytes stay readable.
+///
+/// A cache file containing malformed JSON produces an error rather than a fresh
+/// query. Delete the file to recover; the date-stamped paths from
+/// [`dated_cache_path`] clear themselves the following day.
+pub async fn try_cached_query_json<T, F>(
+    mode: CacheMode,
+    cache_path: &Path,
+    query: impl Fn() -> F,
+) -> Result<T>
+where
+    T: DeserializeOwned,
+    F: Future<Output = Result<String>>,
+{
+    let response = try_cached_query(mode, cache_path, query).await?;
+
+    serde_json::from_str(&response)
+        .with_context(|| format!("Failed to parse JSON for cache entry: {cache_path:?}"))
+}
+
 async fn try_cached(mode: CacheMode, cache_path: &Path) -> Result<Option<String>> {
     if !mode.is_enabled() {
         return Ok(None);
@@ -102,6 +126,11 @@ async fn try_write_cache(mode: CacheMode, cache_path: &Path, response: &str) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[derive(Debug, serde::Deserialize)]
+    struct Holder {
+        value: u32,
+    }
 
     fn test_cache_path(name: &str) -> PathBuf {
         env::temp_dir().join(format!("jluszcz_rust_utils_test_{name}.json"))
@@ -160,6 +189,49 @@ mod tests {
         .unwrap();
 
         assert_eq!(cached, "fresh");
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[tokio::test]
+    async fn test_try_cached_query_json_hit_deserializes_cached_content() {
+        let path = test_cache_path("json_hit");
+        std::fs::write(&path, r#"{"value":7}"#).unwrap();
+
+        let result: Holder = try_cached_query_json(CacheMode::Enabled, &path, || async {
+            Err(anyhow::anyhow!("should not be called"))
+        })
+        .await
+        .unwrap();
+
+        assert_eq!(result.value, 7);
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[tokio::test]
+    async fn test_try_cached_query_json_miss_deserializes_query_result() {
+        let path = test_cache_path("json_miss");
+        let _ = std::fs::remove_file(&path);
+
+        let result: Holder = try_cached_query_json(CacheMode::Disabled, &path, || async {
+            Ok(r#"{"value":42}"#.to_string())
+        })
+        .await
+        .unwrap();
+
+        assert_eq!(result.value, 42);
+    }
+
+    #[tokio::test]
+    async fn test_try_cached_query_json_reports_malformed_content() {
+        let path = test_cache_path("json_malformed");
+        std::fs::write(&path, "not json").unwrap();
+
+        let result = try_cached_query_json::<Holder, _>(CacheMode::Enabled, &path, || async {
+            Ok(String::new())
+        })
+        .await;
+
+        assert!(result.is_err());
         let _ = std::fs::remove_file(&path);
     }
 

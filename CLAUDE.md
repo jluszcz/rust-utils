@@ -27,12 +27,24 @@ This is a Rust utilities library (`jluszcz_rust_utils`) designed for AWS Lambda 
 ### Core Components
 - **Logger setup** (`set_up_logger` in `lib.rs`) - Configures structured logging with timestamp formatting for Lambda environments; logs the rustc version once configured
 - **Lambda initialization** (`lambda::init`) - Thin wrapper around `set_up_logger` that accepts `impl Into<Verbosity>`
+- **Lambda entry point** (`lambda::run`, feature `lambda`) - Installs the TLS provider, sets up logging once at cold start, and serves the handler
+- **HTTP + cache** (`query`, `cache`; feature `query`) - Shared client, retry with body-carrying errors, on-disk cache, typed JSON variants of both
+- **AWS config** (`aws`, feature `aws`) - `SdkConfig` loading with a standard retry policy
+- **Bedrock** (`bedrock`, feature `bedrock`) - Converse-API text generation; prompt and cleanup stay with the caller
+- **CLI args** (`cli`, feature `cli`) - Flattenable clap verbosity argument
+- **TLS** (`tls`, feature `tls`) - `rustls` crypto provider installation
+
+Features are additive and default-off. Consumers track this crate as an unpinned git dependency, so
+`main` must keep building for repos that haven't opted into a new feature yet.
 
 ### Key Dependencies
 - `anyhow` - Error handling
 - `fern` + `log` - Structured logging
 - `chrono` - Timestamp formatting
-- (`query` feature) `reqwest`, `backon`, `serde`, `tokio` - HTTP GET with retry and file-based cache
+- (`query`) `reqwest`, `backon`, `serde`, `serde_json`, `tokio` - HTTP with retry and file-based cache
+- (`cli`) `clap` - Shared verbosity argument
+- (`aws`, `bedrock`) `aws-config`, `aws-sdk-bedrockruntime` - AWS configuration and Bedrock
+- (`tls`, `lambda`) `rustls`, `lambda_runtime` - TLS provider and Lambda runtime
 
 ### Build System
 - Uses `build.rs` to capture rustc version at build time via `RUSTC_VERSION` environment variable
@@ -41,7 +53,7 @@ This is a Rust utilities library (`jluszcz_rust_utils`) designed for AWS Lambda 
 
 ### Documentation
 - `src/lib.rs` sets `#![warn(missing_docs)]`, and CI lints with `-D warnings`, so **every new public item needs a doc
-  comment or the build fails**. This is deliberate: the crate is consumed by five sibling repos whose authors read
+  comment or the build fails**. This is deliberate: the crate is consumed by sibling repos whose authors read
   rustdoc rather than the source.
 - Document the *why* a caller can't infer: `set_up_logger` caps dependencies at `Warn` so verbosity doesn't bury the
   application's own output; `lambda::init` is `async` and fallible for future headroom rather than present need.
@@ -50,10 +62,14 @@ This is a Rust utilities library (`jluszcz_rust_utils`) designed for AWS Lambda 
 ### Dependency Versioning
 - Pin 0.x dependencies to their **minor** version (`chrono = "0.4"`, not `chrono = "0"`). For 0.x crates the minor
   version is the breaking axis, so a bare `"0"` resolves to `<1.0.0` and lets breaking releases through silently.
-- Five sibling repos consume this crate as an unpinned git dependency, so a break here fans out to all of them.
+- Sibling repos consume this crate as an unpinned git dependency, so a break here fans out to all of them.
 
 ### Testing
-- Unit tests in `cache.rs` and `query.rs` modules
+- Unit tests live alongside the code, in a `mod tests` per module
+- `query.rs` tests `send` against a `TcpListener` bound to an ephemeral port rather than mocking
+  `reqwest`, which is what makes the retry *count* observable
+- Prefer extracting a pure function over testing through an AWS or network client: `resolve_model_id`,
+  `extract_text`, and `truncate_body` exist in that shape for this reason
 - CI is a thin caller of `jluszcz/github-utils/.github/workflows/rust-ci.yml` (`.github/workflows/ci.yml`), which
   runs build, test, `cargo fmt --check`, and `cargo clippy -- -D warnings` on `ubuntu-24.04-arm` with `--all-features`.
   The steps live in that shared workflow, not in this repo.
