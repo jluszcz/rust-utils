@@ -42,7 +42,9 @@ Returns a shared singleton `reqwest::Client` configured with:
 
 ### Request with retry (`query::send`) — feature `query`
 
-Sends any `reqwest::RequestBuilder` with exponential-backoff retry (up to 3 attempts, 100ms base delay, 2s max, with jitter). Retries cover transport errors and transient HTTP responses (5xx, 429); other non-2xx responses are returned immediately. Either way the error carries the response body (truncated to 1 KiB), which `reqwest`'s own `error_for_status` discards. Requests whose body can't be replayed are sent exactly once.
+Sends any `reqwest::RequestBuilder`, retrying with exponential backoff where that is safe (up to 3 attempts, 100ms base delay, 2s max, with jitter). Retries cover transport errors and transient HTTP responses (5xx, 429); other non-2xx responses are returned immediately. Either way the error carries the response body (truncated to 1 KiB), which `reqwest`'s own `error_for_status` discards.
+
+A request is sent exactly once when its method isn't idempotent (POST, PATCH) — a 5xx can arrive after the write committed, so retrying a create would duplicate it — or when its body can't be replayed.
 
 ### HTTP GET with retry (`query::http_get`) — feature `query`
 
