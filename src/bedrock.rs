@@ -49,9 +49,7 @@ impl BedrockClient {
     pub async fn from_env_if_credentialed() -> Option<Self> {
         let config = aws::config(None).await;
 
-        let provider = config.credentials_provider()?;
-        if let Err(e) = provider.provide_credentials().await {
-            debug!("AWS credentials unavailable; skipping Bedrock: {e}");
+        if !is_credentialed(&config).await {
             return None;
         }
 
@@ -103,6 +101,25 @@ impl BedrockClient {
     }
 }
 
+/// Whether `config` can actually produce credentials.
+///
+/// Split out from [`BedrockClient::from_env_if_credentialed`] so the decision
+/// is testable against a hand-built [`SdkConfig`] — resolving the real
+/// credential chain in a test would depend on the machine running it.
+async fn is_credentialed(config: &SdkConfig) -> bool {
+    let Some(provider) = config.credentials_provider() else {
+        debug!("No AWS credentials provider configured; skipping Bedrock");
+        return false;
+    };
+
+    if let Err(e) = provider.provide_credentials().await {
+        debug!("AWS credentials unavailable; skipping Bedrock: {e}");
+        return false;
+    }
+
+    true
+}
+
 fn resolve_model_id(override_id: Option<String>) -> String {
     override_id.unwrap_or_else(|| DEFAULT_MODEL_ID.to_owned())
 }
@@ -128,6 +145,9 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use aws_credential_types::provider;
+    use aws_credential_types::provider::error::CredentialsError;
+    use aws_sdk_bedrockruntime::config::{Credentials, SharedCredentialsProvider};
     use aws_sdk_bedrockruntime::types::{
         CachePointBlock, CachePointType, ContentBlock, ConversationRole, ConverseOutput, Message,
     };
@@ -187,6 +207,49 @@ mod tests {
         )]);
 
         assert!(extract_text(Some(&output)).is_err());
+    }
+
+    #[tokio::test]
+    async fn test_is_credentialed_is_false_without_a_provider() {
+        let config = SdkConfig::builder().build();
+
+        assert!(!is_credentialed(&config).await);
+    }
+
+    #[tokio::test]
+    async fn test_is_credentialed_is_true_with_resolvable_credentials() {
+        let config = SdkConfig::builder()
+            .credentials_provider(SharedCredentialsProvider::new(Credentials::for_tests()))
+            .build();
+
+        assert!(is_credentialed(&config).await);
+    }
+
+    /// Stands in for the real credential chain on a machine with no AWS setup:
+    /// a provider is present, but resolving it fails. This is the realistic
+    /// case — `aws_config::defaults` always installs a chain, so the
+    /// no-provider-at-all branch barely occurs in production.
+    #[derive(Debug)]
+    struct UnresolvableProvider;
+
+    impl ProvideCredentials for UnresolvableProvider {
+        fn provide_credentials<'a>(&'a self) -> provider::future::ProvideCredentials<'a>
+        where
+            Self: 'a,
+        {
+            provider::future::ProvideCredentials::ready(Err(CredentialsError::not_loaded(
+                "no credentials in this environment",
+            )))
+        }
+    }
+
+    #[tokio::test]
+    async fn test_is_credentialed_is_false_when_the_provider_fails() {
+        let config = SdkConfig::builder()
+            .credentials_provider(SharedCredentialsProvider::new(UnresolvableProvider))
+            .build();
+
+        assert!(!is_credentialed(&config).await);
     }
 
     #[tokio::test]

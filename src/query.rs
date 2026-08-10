@@ -159,15 +159,20 @@ where
 {
     let client = http_client()?;
 
+    // Parse here rather than letting `send` do it: reqwest's builder error
+    // names the parse failure but not the URL that caused it, and this is the
+    // last point at which we still have it. Errors from `send` already carry
+    // the URL, so they need no further context.
+    let parsed = reqwest::Url::parse(url).with_context(|| format!("Invalid request URL: {url}"))?;
+
     let request = client
-        .request(Method::GET, url)
+        .request(Method::GET, parsed)
         .header("Accept", "application/json")
         .header("Accept-Encoding", "gzip")
         .query(params);
 
     let response = send(request)
-        .await
-        .with_context(|| format!("HTTP request failed for {url}"))?
+        .await?
         .text()
         .await
         .context("Failed to read response body")?;
@@ -274,6 +279,33 @@ mod tests {
 
         assert_eq!(body, r#"{"ok":true}"#);
         assert_eq!(requests.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn test_http_get_names_the_url_only_once() {
+        let (url, _) = serve("404 Not Found", "gone");
+
+        let error = http_get(&url, &[("a", "b")])
+            .await
+            .expect_err("404 should be an error");
+
+        // `send` already names the URL; wrapping it again here produced
+        // "HTTP request failed for <url>: HTTP 404 from <url>: ...".
+        let message = format!("{error:#}");
+        assert_eq!(message.matches("HTTP 404").count(), 1, "{message}");
+        assert!(!message.contains("HTTP request failed for"), "{message}");
+    }
+
+    #[tokio::test]
+    async fn test_http_get_reports_an_unusable_url() {
+        let error = http_get("not a url", &[("a", "b")])
+            .await
+            .expect_err("a malformed URL should be an error");
+
+        // reqwest's own builder error says only "relative URL without a base",
+        // which doesn't say *which* URL was wrong.
+        let message = format!("{error:#}");
+        assert!(message.contains("not a url"), "{message}");
     }
 
     #[test]
