@@ -121,18 +121,45 @@ async fn send_once(request: RequestBuilder) -> Result<Response, QueryError> {
     check_status(response).await
 }
 
-/// Sends a request with exponential-backoff retry, using the shared client's
-/// connection pool if the request was built from [`http_client`].
+/// Whether re-sending a request with this method is safe.
 ///
-/// Retries up to 3 times with 100ms base delay, 2s max delay, and jitter.
-/// Retries cover transport errors and transient HTTP responses (5xx, 429);
-/// other non-2xx responses are returned immediately. Either way the error
-/// carries the response body, truncated to a bounded length.
+/// POST and PATCH are excluded: a 5xx can arrive after the server already
+/// committed the write, so a retry would apply it twice.
+fn is_idempotent(method: &Method) -> bool {
+    matches!(
+        *method,
+        Method::GET | Method::HEAD | Method::PUT | Method::DELETE | Method::OPTIONS | Method::TRACE
+    )
+}
+
+/// Sends a request, retrying with exponential backoff when that is safe, using
+/// the shared client's connection pool if the request was built from
+/// [`http_client`].
 ///
-/// Requests whose body can't be replayed (a stream) are sent exactly once,
-/// since a retry would resume from a partially consumed body.
+/// Retries up to 3 times with 100ms base delay, 2s max delay, and jitter, and
+/// cover transport errors and transient HTTP responses (5xx, 429). Other
+/// non-2xx responses are returned immediately. Either way the error carries the
+/// response body, truncated to a bounded length.
+///
+/// A request is sent exactly once, with no retry, when either:
+///
+/// - its method isn't idempotent (POST, PATCH), because a 5xx can arrive after
+///   the write already committed — retrying a create would produce a duplicate;
+/// - its body can't be replayed (a stream), because a retry would resume from a
+///   partially consumed body.
+///
+/// A caller whose POST *is* safe to repeat — because the endpoint takes an
+/// idempotency key, say — should drive [`http_client`] and this crate's retry
+/// policy itself rather than reaching for a blanket opt-out here.
 pub async fn send(request: RequestBuilder) -> Result<Response> {
-    if request.try_clone().is_none() {
+    // Both conditions in one: a replayable body *and* a method that's safe to
+    // repeat.
+    let retryable = request
+        .try_clone()
+        .and_then(|attempt| attempt.build().ok())
+        .is_some_and(|built| is_idempotent(built.method()));
+
+    if !retryable {
         return Ok(send_once(request).await?);
     }
 
@@ -267,6 +294,38 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_send_does_not_retry_a_post() {
+        let (url, requests) = serve("503 Service Unavailable", "try later");
+
+        let _ = send(http_client().unwrap().post(&url)).await;
+
+        // A 5xx can arrive after the server committed the write, so retrying a
+        // create would produce a duplicate.
+        assert_eq!(requests.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn test_send_does_not_retry_a_patch() {
+        let (url, requests) = serve("503 Service Unavailable", "try later");
+
+        let _ = send(http_client().unwrap().patch(&url)).await;
+
+        assert_eq!(requests.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn test_send_retries_idempotent_mutations() {
+        let (put_url, put_requests) = serve("503 Service Unavailable", "try later");
+        let (delete_url, delete_requests) = serve("503 Service Unavailable", "try later");
+
+        let _ = send(http_client().unwrap().put(&put_url)).await;
+        let _ = send(http_client().unwrap().delete(&delete_url)).await;
+
+        assert_eq!(put_requests.load(Ordering::SeqCst), 4);
+        assert_eq!(delete_requests.load(Ordering::SeqCst), 4);
+    }
+
+    #[tokio::test]
     async fn test_send_returns_success_response() {
         let (url, requests) = serve("200 OK", r#"{"ok":true}"#);
 
@@ -318,6 +377,27 @@ mod tests {
         let a = http_client().unwrap() as *const Client;
         let b = http_client().unwrap() as *const Client;
         assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_idempotent_methods_are_retryable() {
+        for method in [
+            Method::GET,
+            Method::HEAD,
+            Method::PUT,
+            Method::DELETE,
+            Method::OPTIONS,
+            Method::TRACE,
+        ] {
+            assert!(is_idempotent(&method), "{method} should be retryable");
+        }
+    }
+
+    #[test]
+    fn test_write_methods_are_not_retryable() {
+        for method in [Method::POST, Method::PATCH] {
+            assert!(!is_idempotent(&method), "{method} should not be retryable");
+        }
     }
 
     #[test]
