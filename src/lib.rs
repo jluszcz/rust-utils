@@ -9,6 +9,9 @@ use log::{LevelFilter, info};
 
 pub mod lambda;
 
+#[cfg(feature = "cli")]
+pub mod cli;
+
 #[cfg(feature = "query")]
 pub mod query;
 

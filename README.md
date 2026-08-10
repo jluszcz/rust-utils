@@ -36,9 +36,14 @@ Two helpers for a simple cache-aside pattern backed by the filesystem:
 - **`dated_cache_path(name)`** — Returns a path in the system temp directory of the form `$TMPDIR/<name>.YYYYMMDD.json`. The date-stamped filename naturally expires the cache each calendar day.
 - **`try_cached_query(mode, cache_path, query)`** — Returns cached content if the file exists; otherwise calls the async `query` closure, writes the result to `cache_path`, and returns it. Pass `CacheMode::Disabled` to bypass the cache entirely.
 
+### Verbosity flag (`cli::VerbosityArgs`) — feature `cli`
+
+A flattenable clap argument providing the repeatable `-v` flag, converting into `Verbosity` (absent → Info, `-v` → Debug, `-vv` or more → Trace). Flatten it into an application's own `Parser` struct with `#[command(flatten)]` so every binary shares one spelling and one help string.
+
 ## Features
 
 | Feature | Adds |
 |---------|------|
 | *(default)* | Logging, Lambda init |
 | `query` | HTTP client, HTTP GET with retry, file-based cache |
+| `cli` | Shared clap verbosity argument |
