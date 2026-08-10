@@ -26,9 +26,13 @@ New features, all off by default:
 shared client and retry policy; add `http_get_json` and `try_cached_query_json`.
 **Success Criteria**: `cargo test --features query` passes; `http_get` behavior unchanged except for
 richer error text.
-**Tests**: transient/permanent classification by status; typed JSON round-trip through a cache hit;
-`send` retry path for a body that can't be cloned.
-**Status**: Not Started
+**Tests**: transient/permanent classification by status; body truncation on a char boundary; typed
+JSON round-trip through a cache hit; `send` against a local socket for the retry count, the
+no-retry-on-4xx path, and the body appearing in the error.
+**Status**: Complete
+
+The single-attempt path for non-replayable bodies is not covered — exercising it needs a streaming
+request body, and the assertion would be about `reqwest`'s behavior rather than this crate's.
 
 ## Stage 3: `aws` feature
 
