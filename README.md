@@ -45,6 +45,10 @@ Two helpers for a simple cache-aside pattern backed by the filesystem:
 
 A flattenable clap argument providing the repeatable `-v` flag, converting into `Verbosity` (absent → Info, `-v` → Debug, `-vv` or more → Trace). Flatten it into an application's own `Parser` struct with `#[command(flatten)]` so every binary shares one spelling and one help string.
 
+### AWS configuration (`aws::config`) — feature `aws`
+
+Loads the ambient AWS configuration with `BehaviorVersion::latest()` and a standard retry policy (3 attempts; `aws::config_with_max_attempts` raises it for long batch work). Takes an optional region override, for CLIs that accept `--region`; pass `None` in a Lambda to accept the ambient one. The SDK applies no retries unless asked, which is the reason to route configuration through here.
+
 ## Features
 
 | Feature | Adds |
@@ -52,3 +56,4 @@ A flattenable clap argument providing the repeatable `-v` flag, converting into 
 | *(default)* | Logging, Lambda init |
 | `query` | HTTP client, HTTP GET with retry, file-based cache |
 | `cli` | Shared clap verbosity argument |
+| `aws` | Shared AWS SDK configuration |

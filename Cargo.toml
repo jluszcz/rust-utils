@@ -13,12 +13,14 @@ rustc_version = "0.4"
 [features]
 query = ["dep:backon", "dep:reqwest", "dep:serde", "dep:serde_json", "dep:tokio"]
 cli = ["dep:clap"]
+aws = ["dep:aws-config"]
 
 [dependencies]
 anyhow = "1"
 chrono = "0.4"
 fern = "0.7"
 log = "0.4"
+aws-config = { version = "1", features = ["behavior-version-latest"], optional = true }
 backon  = { version = "1",    optional = true }
 clap    = { version = "4",    features = ["derive"], optional = true }
 reqwest = { version = "0.13", features = ["gzip", "json", "query"], optional = true }

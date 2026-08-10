@@ -9,6 +9,9 @@ use log::{LevelFilter, info};
 
 pub mod lambda;
 
+#[cfg(feature = "aws")]
+pub mod aws;
+
 #[cfg(feature = "cli")]
 pub mod cli;
 

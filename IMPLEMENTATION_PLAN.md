@@ -36,11 +36,14 @@ request body, and the assertion would be about `reqwest`'s behavior rather than 
 
 ## Stage 3: `aws` feature
 
-**Goal**: `aws::config(region)` returning an `SdkConfig` with a standard retry policy, plus
-`aws::has_credentials` for the probe mbtalerts does today.
+**Goal**: `aws::config(region)` returning an `SdkConfig` with a standard retry policy.
 **Success Criteria**: `cargo test --features aws` passes.
-**Tests**: region override is applied; default (no region) resolves from the environment.
-**Status**: Not Started
+**Tests**: region override is applied; default and overridden retry budgets reach the config.
+**Status**: Complete
+
+The credential probe moved to Stage 4. It needs the `ProvideCredentials` trait, which `aws-config`
+doesn't re-export but the service SDKs do — so it belongs where a service SDK is already a
+dependency, rather than pulling `aws-credential-types` in here for one call.
 
 ## Stage 4: `bedrock` feature
 
