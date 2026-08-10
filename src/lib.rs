@@ -24,6 +24,9 @@ pub mod query;
 #[cfg(feature = "query")]
 pub mod cache;
 
+#[cfg(feature = "tls")]
+pub mod tls;
+
 pub(crate) const RUSTC_VERSION: &str = env!("RUSTC_VERSION");
 
 /// How much the calling application should log.

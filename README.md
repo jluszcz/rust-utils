@@ -18,6 +18,21 @@ Configures structured logging via `fern` with UTC timestamps in the format `YYYY
 
 Thin entry-point helper that calls `set_up_logger`. Accepts `impl Into<Verbosity>`, so callers can pass a `bool`, a `u8`, or a `Verbosity` directly.
 
+### Lambda entry point (`lambda::run`) — feature `lambda`
+
+Replaces the `main` each Lambda binary writes by hand: installs the `rustls` crypto provider, sets up logging once at cold start, and serves the handler until the runtime shuts down. The handler is any `Fn(LambdaEvent<T>) -> Future<Output = Result<R, lambda_runtime::Error>>` with `T: DeserializeOwned` and `R: Serialize`.
+
+```rust,ignore
+#[tokio::main]
+async fn main() -> Result<(), lambda_runtime::Error> {
+    lambda::run(APP_NAME, module_path!(), false, function).await
+}
+```
+
+### TLS provider (`tls::install_default_provider`) — feature `tls`
+
+Installs `aws-lc-rs` as the process-wide `rustls` crypto provider, which otherwise fails on the first HTTPS request rather than at build time. Idempotent. `lambda::run` calls it (the `lambda` feature implies `tls`); non-Lambda binaries call it at the top of `main`.
+
 ### HTTP client (`query::http_client`) — feature `query`
 
 Returns a shared singleton `reqwest::Client` configured with:
@@ -64,3 +79,5 @@ Prompt construction and cleanup of the reply stay with the caller — those are 
 | `cli` | Shared clap verbosity argument |
 | `aws` | Shared AWS SDK configuration |
 | `bedrock` | Bedrock Converse client (implies `aws`) |
+| `tls` | `rustls` crypto provider installation |
+| `lambda` | Lambda entry point (implies `tls`) |
