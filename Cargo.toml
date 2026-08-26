@@ -24,7 +24,10 @@ chrono = "0.4"
 fern = "0.7"
 log = "0.4"
 aws-config = { version = "1", features = ["behavior-version-latest"], optional = true }
-aws-sdk-bedrockruntime = { version = "1", features = ["behavior-version-latest"], optional = true }
+# `default` pulls in the `rustls` feature, which is the legacy hyper-0.14 client stack
+# (rustls 0.21 / rustls-webpki 0.101) that nothing here uses and that no longer receives
+# security fixes. `default-https-client` is the modern rustls 0.23 path the SDK actually calls.
+aws-sdk-bedrockruntime = { version = "1", default-features = false, features = ["behavior-version-latest", "default-https-client", "rt-tokio"], optional = true }
 backon  = { version = "1",    optional = true }
 clap    = { version = "4",    features = ["derive"], optional = true }
 lambda_runtime = { version = "1", optional = true }

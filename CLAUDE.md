@@ -63,6 +63,10 @@ Features are additive and default-off. Consumers track this crate as an unpinned
 - Pin 0.x dependencies to their **minor** version (`chrono = "0.4"`, not `chrono = "0"`). For 0.x crates the minor
   version is the breaking axis, so a bare `"0"` resolves to `<1.0.0` and lets breaking releases through silently.
 - Sibling repos consume this crate as an unpinned git dependency, so a break here fans out to all of them.
+- AWS SDK crates ship a `default` feature set that includes `rustls`, which is the legacy hyper-0.14 client
+  stack (rustls 0.21 / rustls-webpki 0.101) — unmaintained and a standing source of Dependabot alerts. Take
+  `default-features = false` and name `default-https-client` (plus `behavior-version-latest` and `rt-tokio`)
+  explicitly when adding or bumping an `aws-sdk-*` dependency.
 
 ### Testing
 - Unit tests live alongside the code, in a `mod tests` per module
