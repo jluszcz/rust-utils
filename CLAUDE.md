@@ -32,7 +32,7 @@ This is a Rust utilities library (`jluszcz_rust_utils`) designed for AWS Lambda 
 - **AWS config** (`aws`, feature `aws`) - `SdkConfig` loading with a standard retry policy
 - **Bedrock** (`bedrock`, feature `bedrock`) - Converse-API text generation; prompt and cleanup stay with the caller
 - **CLI args** (`cli`, feature `cli`) - Flattenable clap verbosity argument
-- **TLS** (`tls`, feature `tls`) - `rustls` crypto provider installation
+- **TLS** (`tls`, features `tls` / `tls-ring`) - `rustls` crypto provider installation, on `aws-lc-rs` or `ring`
 
 Features are additive and default-off. Consumers track this crate as an unpinned git dependency, so
 `main` must keep building for repos that haven't opted into a new feature yet.
@@ -44,7 +44,7 @@ Features are additive and default-off. Consumers track this crate as an unpinned
 - (`query`) `reqwest`, `backon`, `serde`, `serde_json`, `tokio` - HTTP with retry and file-based cache
 - (`cli`) `clap` - Shared verbosity argument
 - (`aws`, `bedrock`) `aws-config`, `aws-sdk-bedrockruntime` - AWS configuration and Bedrock
-- (`tls`, `lambda`) `rustls`, `lambda_runtime` - TLS provider and Lambda runtime
+- (`tls`, `tls-ring`, `lambda`) `rustls`, `lambda_runtime` - TLS provider and Lambda runtime
 
 ### Build System
 - Uses `build.rs` to capture rustc version at build time via `RUSTC_VERSION` environment variable

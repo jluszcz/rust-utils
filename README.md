@@ -29,9 +29,9 @@ async fn main() -> Result<(), lambda_runtime::Error> {
 }
 ```
 
-### TLS provider (`tls::install_default_provider`) — feature `tls`
+### TLS provider (`tls::install_default_provider`) — features `tls`, `tls-ring`
 
-Installs `aws-lc-rs` as the process-wide `rustls` crypto provider, which otherwise fails on the first HTTPS request rather than at build time. Idempotent. `lambda::run` calls it (the `lambda` feature implies `tls`); non-Lambda binaries call it at the top of `main`.
+Installs the process-wide `rustls` crypto provider. Without one, building an HTTPS client panics at runtime rather than the build failing. `tls` installs `aws-lc-rs`; `tls-ring` installs `ring`, which avoids compiling C. `tls` wins when both are enabled. Idempotent. `lambda::run` calls it (the `lambda` feature implies `tls`); every other binary calls it at the top of `main`, including one that takes `query` without `lambda`.
 
 ### HTTP client (`query::http_client`) — feature `query`
 
@@ -39,6 +39,8 @@ Returns a shared singleton `reqwest::Client` configured with:
 - 30s request timeout, 10s connect timeout
 - 90s pool idle timeout, max 10 idle connections per host
 - gzip decompression enabled
+
+The client pins no `rustls` crypto provider, so a consumer chooses one: enable `tls` or `tls-ring` and call `tls::install_default_provider` before the first call — `query::http_client` panics without one.
 
 ### Request with retry (`query::send`) — feature `query`
 
@@ -81,5 +83,6 @@ Prompt construction and cleanup of the reply stay with the caller — those are 
 | `cli` | Shared clap verbosity argument |
 | `aws` | Shared AWS SDK configuration |
 | `bedrock` | Bedrock Converse client (implies `aws`) |
-| `tls` | `rustls` crypto provider installation |
+| `tls` | `rustls` crypto provider installation (`aws-lc-rs`) |
+| `tls-ring` | The same, on `ring` — no C compilation |
 | `lambda` | Lambda entry point (implies `tls`) |
