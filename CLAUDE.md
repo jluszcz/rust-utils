@@ -29,7 +29,7 @@ This is a Rust utilities library (`jluszcz_rust_utils`) designed for AWS Lambda 
 
 ### Core Components
 - **Logger setup** (`set_up_logger` in `lib.rs`) - Configures structured logging with timestamp formatting for Lambda environments; logs the rustc version once configured
-- **Lambda initialization** (`lambda::init`) - Thin wrapper around `set_up_logger` that accepts `impl Into<Verbosity>`
+- **Lambda initialization** (`lambda::init`) - Installs the TLS provider and wraps `set_up_logger`; accepts `impl Into<Verbosity>`
 - **Lambda entry point** (`lambda::run`, feature `lambda`) - Installs the TLS provider, sets up logging once at cold start, and serves the handler
 - **HTTP + cache** (`query`, `cache`; feature `query`) - Shared client, retry with body-carrying errors, on-disk cache, typed JSON variants of both
 - **AWS config** (`aws`, feature `aws`) - `SdkConfig` loading with a standard retry policy

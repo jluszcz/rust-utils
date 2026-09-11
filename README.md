@@ -16,7 +16,7 @@ Configures structured logging via `fern` with UTC timestamps in the format `YYYY
 
 ### Lambda initialization (`lambda::init`)
 
-Thin entry-point helper that calls `set_up_logger`. Accepts `impl Into<Verbosity>`, so callers can pass a `bool`, a `u8`, or a `Verbosity` directly.
+Thin entry-point helper that installs the `rustls` crypto provider (whichever of `tls` or `tls-ring` is enabled, matching `lambda::run`) and calls `set_up_logger`. Accepts `impl Into<Verbosity>`, so callers can pass a `bool`, a `u8`, or a `Verbosity` directly.
 
 ### Lambda entry point (`lambda::run`) — feature `lambda`
 

@@ -39,7 +39,13 @@ where
     lambda_runtime::run(service_fn(handler)).await
 }
 
-/// Prepares a Lambda invocation: currently just logging setup.
+/// Prepares a Lambda invocation: installs the `rustls` crypto provider and sets
+/// up logging.
+///
+/// The provider is whichever of `tls` or `tls-ring` is enabled, matching
+/// `run`; with neither enabled there is none to install, and a binary that also
+/// takes `query` installs its own before the first request. See
+/// `tls::install_default_provider`.
 ///
 /// Call this once at the top of `main`, before `lambda_runtime::run`. It is
 /// `async` and returns a `Result` because Lambda initialization has needed both
@@ -50,6 +56,9 @@ pub async fn init(
     calling_module: &'static str,
     verbosity: impl Into<Verbosity>,
 ) -> anyhow::Result<()> {
+    #[cfg(any(feature = "tls", feature = "tls-ring"))]
+    crate::tls::install_default_provider();
+
     set_up_logger(app_name, calling_module, verbosity)
 }
 
