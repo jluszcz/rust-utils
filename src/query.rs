@@ -24,9 +24,9 @@ const MAX_ERROR_BODY_LEN: usize = 1024;
 ///
 /// **A `rustls` crypto provider must be installed before the first call.**
 /// This crate's reqwest build pins none, so the application chooses: enable
-/// `tls` or `tls-ring` and call [`crate::tls::install_default_provider`], which
-/// [`crate::lambda::run`] already does for Lambda binaries. Without one,
-/// building the client panics rather than the build failing.
+/// `tls` or `tls-ring` and call `tls::install_default_provider`, which
+/// `lambda::run` already does for Lambda binaries. Without one, building the
+/// client panics rather than the build failing.
 pub fn http_client() -> Result<&'static Client> {
     if let Some(client) = HTTP_CLIENT.get() {
         return Ok(client);
@@ -240,10 +240,19 @@ mod tests {
     /// Installs a `rustls` crypto provider for the process, once.
     ///
     /// `http_client` documents that the application is responsible for this;
-    /// here, the test suite is the application.
+    /// here, the test suite is the application. reqwest's `rustls-no-provider`
+    /// build panics when a `Client` is built with no provider installed, so
+    /// this delegates to the crate's own feature-selected provider — falling
+    /// back to `aws-lc-rs` directly when neither `tls` nor `tls-ring` is
+    /// enabled — rather than hardcoding one, which would install the wrong
+    /// provider under a `tls-ring`-only build and race `tls`'s own tests for
+    /// the single process-wide slot.
     fn install_crypto_provider() {
         static ONCE: std::sync::Once = std::sync::Once::new();
         ONCE.call_once(|| {
+            #[cfg(any(feature = "tls", feature = "tls-ring"))]
+            crate::tls::install_default_provider();
+            #[cfg(not(any(feature = "tls", feature = "tls-ring")))]
             let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
         });
     }

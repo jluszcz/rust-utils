@@ -4,13 +4,13 @@
 ///
 /// Which provider depends on the enabled feature: `tls` installs `aws-lc-rs`,
 /// `tls-ring` installs `ring`, and `tls` wins when both are on. Without a
-/// provider installed, building an HTTPS client panics rather than the build
+/// provider installed, building the client panics rather than the build
 /// failing. Calling this before any TLS work removes that failure mode.
 ///
 /// Safe to call repeatedly and from anywhere: if a provider is already
-/// installed, this leaves it alone. [`crate::lambda::run`] calls it for you;
-/// binaries that aren't Lambdas — including any that take `query` without
-/// `lambda` — call it themselves at the top of `main`.
+/// installed, this leaves it alone. `lambda::run` calls it for you; binaries
+/// that aren't Lambdas — including any that take `query` without `lambda` —
+/// call it themselves at the top of `main`.
 pub fn install_default_provider() {
     #[cfg(feature = "tls")]
     let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
@@ -47,8 +47,8 @@ mod tests {
         let expected = rustls::crypto::ring::default_provider();
 
         assert_eq!(
-            provider.cipher_suites.len(),
-            expected.cipher_suites.len(),
+            format!("{:?}", provider.key_provider),
+            format!("{:?}", expected.key_provider),
             "installed provider is not the one the enabled feature names"
         );
     }

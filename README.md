@@ -31,7 +31,7 @@ async fn main() -> Result<(), lambda_runtime::Error> {
 
 ### TLS provider (`tls::install_default_provider`) — features `tls`, `tls-ring`
 
-Installs the process-wide `rustls` crypto provider. Without one, building an HTTPS client panics at runtime rather than the build failing. `tls` installs `aws-lc-rs`; `tls-ring` installs `ring`, a smaller build that needs no CMake. `tls` wins when both are enabled. Idempotent. `lambda::run` calls it (the `lambda` feature implies `tls`); every other binary calls it at the top of `main`, including one that takes `query` without `lambda`.
+Installs the process-wide `rustls` crypto provider. Without one, building the client panics at runtime rather than the build failing. `tls` installs `aws-lc-rs`; `tls-ring` installs `ring`, a smaller build that needs no CMake. `tls` wins when both are enabled, so a `lambda` consumer — which implies `tls` — can't get `ring` by also enabling `tls-ring`. Idempotent. `lambda::run` calls it (the `lambda` feature implies `tls`); every other binary calls it at the top of `main`, including one that takes `query` without `lambda`.
 
 ### HTTP client (`query::http_client`) — feature `query`
 

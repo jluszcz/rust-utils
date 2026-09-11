@@ -9,6 +9,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `cargo test` - Run all tests
 - `cargo fmt --check` - Check formatting (same as CI)
 - `cargo clippy --all-targets --all-features -- -D warnings` - Run linter with warnings as errors
+- `./scripts/check-features.sh` - Verify `query` alone pulls no `rustls` crypto provider and `query,tls` /
+  `query,tls-ring` pull the right one; CI's `--all-features` run can't catch a `query`-only provider regression,
+  so this is the check for it
 
 ### Production Build
 
