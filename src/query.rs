@@ -21,6 +21,12 @@ const MAX_ERROR_BODY_LEN: usize = 1024;
 ///
 /// The client is initialized once with a 30s request timeout, 10s connect timeout,
 /// 90s pool idle timeout, a per-host connection limit of 10, and gzip decompression.
+///
+/// **A `rustls` crypto provider must be installed before the first call.**
+/// This crate's reqwest build pins none, so the application chooses: enable
+/// `tls` or `tls-ring` and call [`crate::tls::install_default_provider`], which
+/// [`crate::lambda::run`] already does for Lambda binaries. Without one,
+/// building the client panics rather than the build failing.
 pub fn http_client() -> Result<&'static Client> {
     if let Some(client) = HTTP_CLIENT.get() {
         return Ok(client);
@@ -231,6 +237,17 @@ mod tests {
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
+    /// Installs a `rustls` crypto provider for the process, once.
+    ///
+    /// `http_client` documents that the application is responsible for this;
+    /// here, the test suite is the application.
+    fn install_crypto_provider() {
+        static ONCE: std::sync::Once = std::sync::Once::new();
+        ONCE.call_once(|| {
+            let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+        });
+    }
+
     /// Serves one canned response per connection, counting how many requests
     /// arrived — which is how the retry behavior is actually observable.
     fn serve(status_line: &str, body: &str) -> (String, Arc<AtomicUsize>) {
@@ -259,6 +276,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_send_error_carries_response_body() {
+        install_crypto_provider();
         let (url, requests) = serve("404 Not Found", "no such widget");
 
         let error = send(http_client().unwrap().get(&url))
@@ -273,6 +291,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_send_does_not_retry_client_errors() {
+        install_crypto_provider();
         let (url, requests) = serve("400 Bad Request", "malformed");
 
         let _ = send(http_client().unwrap().get(&url)).await;
@@ -282,6 +301,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_send_retries_server_errors() {
+        install_crypto_provider();
         let (url, requests) = serve("503 Service Unavailable", "try later");
 
         let error = send(http_client().unwrap().get(&url))
@@ -295,6 +315,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_send_does_not_retry_a_post() {
+        install_crypto_provider();
         let (url, requests) = serve("503 Service Unavailable", "try later");
 
         let _ = send(http_client().unwrap().post(&url)).await;
@@ -306,6 +327,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_send_does_not_retry_a_patch() {
+        install_crypto_provider();
         let (url, requests) = serve("503 Service Unavailable", "try later");
 
         let _ = send(http_client().unwrap().patch(&url)).await;
@@ -315,6 +337,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_send_retries_idempotent_mutations() {
+        install_crypto_provider();
         let (put_url, put_requests) = serve("503 Service Unavailable", "try later");
         let (delete_url, delete_requests) = serve("503 Service Unavailable", "try later");
 
@@ -327,6 +350,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_send_returns_success_response() {
+        install_crypto_provider();
         let (url, requests) = serve("200 OK", r#"{"ok":true}"#);
 
         let body = send(http_client().unwrap().get(&url))
@@ -342,6 +366,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_http_get_names_the_url_only_once() {
+        install_crypto_provider();
         let (url, _) = serve("404 Not Found", "gone");
 
         let error = http_get(&url, &[("a", "b")])
@@ -357,6 +382,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_http_get_reports_an_unusable_url() {
+        install_crypto_provider();
         let error = http_get("not a url", &[("a", "b")])
             .await
             .expect_err("a malformed URL should be an error");
@@ -369,11 +395,13 @@ mod tests {
 
     #[test]
     fn test_http_client_returns_ok() {
+        install_crypto_provider();
         assert!(http_client().is_ok());
     }
 
     #[test]
     fn test_http_client_is_singleton() {
+        install_crypto_provider();
         let a = http_client().unwrap() as *const Client;
         let b = http_client().unwrap() as *const Client;
         assert_eq!(a, b);
