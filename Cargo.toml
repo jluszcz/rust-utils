@@ -51,8 +51,15 @@ tokio   = { version = "1",    features = ["fs"], optional = true }
 aws-credential-types = { version = "1", features = ["test-util"] }
 # reqwest's `rustls-no-provider` build panics when a `Client` is built with no
 # process-wide provider installed. The library leaves that choice to the
-# application; the test suite makes it here. Dev-dependencies do not reach
-# consumers, so this pins nothing for them.
+# application; the test suite makes it here, for the case where neither `tls`
+# nor `tls-ring` is enabled and there is otherwise no provider to install.
+# Dev-dependencies do not reach consumers, so this pins nothing for them.
+#
+# It does mean dev-dependency feature unification compiles `aws-lc-sys` into
+# every test build, `--features tls-ring` included, so `cargo test` never sees
+# a ring-only graph and building the tests wants CMake. `cargo build`, which
+# takes no dev-dependencies, is what covers ring alone; CI's `features` job
+# runs both.
 rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs"] }
 serde_json = "1"
 tokio = { version = "1", features = ["macros", "rt"] }
