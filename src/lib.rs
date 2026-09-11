@@ -24,7 +24,7 @@ pub mod query;
 #[cfg(feature = "query")]
 pub mod cache;
 
-#[cfg(feature = "tls")]
+#[cfg(any(feature = "tls", feature = "tls-ring"))]
 pub mod tls;
 
 pub(crate) const RUSTC_VERSION: &str = env!("RUSTC_VERSION");

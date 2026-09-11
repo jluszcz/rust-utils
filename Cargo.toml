@@ -15,7 +15,8 @@ query = ["dep:backon", "dep:reqwest", "dep:serde", "dep:serde_json", "dep:tokio"
 cli = ["dep:clap"]
 aws = ["dep:aws-config"]
 bedrock = ["aws", "dep:aws-sdk-bedrockruntime", "tokio/time"]
-tls = ["dep:rustls"]
+tls = ["dep:rustls", "rustls/aws_lc_rs"]
+tls-ring = ["dep:rustls", "rustls/ring"]
 lambda = ["tls", "dep:lambda_runtime", "dep:serde"]
 
 [dependencies]
@@ -31,7 +32,7 @@ aws-sdk-bedrockruntime = { version = "1", default-features = false, features = [
 backon  = { version = "1",    optional = true }
 clap    = { version = "4",    features = ["derive"], optional = true }
 lambda_runtime = { version = "1", optional = true }
-rustls  = { version = "0.23", default-features = false, features = ["aws_lc_rs"], optional = true }
+rustls  = { version = "0.23", default-features = false, optional = true }
 reqwest = { version = "0.13", features = ["gzip", "json", "query"], optional = true }
 serde   = { version = "1",    features = ["derive"], optional = true }
 serde_json = { version = "1", optional = true }
