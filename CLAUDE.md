@@ -10,8 +10,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `cargo fmt --check` - Check formatting (same as CI)
 - `cargo clippy --all-targets --all-features -- -D warnings` - Run linter with warnings as errors
 - `./scripts/check-features.sh` - Verify `query` alone pulls no `rustls` crypto provider and `query,tls` /
-  `query,tls-ring` pull the right one; CI's `--all-features` run can't catch a `query`-only provider regression,
-  so this is the check for it
+  `query,tls-ring` pull the right one. The `--all-features` build can't catch a `query`-only provider
+  regression, so this is the check for it; CI's `features` job runs it
 
 ### Production Build
 
@@ -77,6 +77,10 @@ Features are additive and default-off. Consumers track this crate as an unpinned
   `reqwest`, which is what makes the retry *count* observable
 - Prefer extracting a pure function over testing through an AWS or network client: `resolve_model_id`,
   `extract_text`, and `truncate_body` exist in that shape for this reason
-- CI is a thin caller of `jluszcz/github-utils/.github/workflows/rust-ci.yml` (`.github/workflows/ci.yml`), which
-  runs build, test, `cargo fmt --check`, and `cargo clippy -- -D warnings` on `ubuntu-24.04-arm` with `--all-features`.
-  The steps live in that shared workflow, not in this repo.
+- `.github/workflows/ci.yml` has two jobs. `ci` is a thin caller of
+  `jluszcz/github-utils/.github/workflows/rust-ci.yml`, which runs build, test, `cargo fmt --check`, and
+  `cargo clippy -- -D warnings` on `ubuntu-24.04-arm` with `--all-features`; those steps live in the shared
+  workflow, not in this repo. `features` is local, and covers what `--all-features` cannot reach: with `tls`
+  always on, it always wins the cfg arms in `install_default_provider`, so the `tls-ring` arm and the
+  provider-less `query` graph are only compiled and tested by that job. The shared workflow takes no feature
+  list, which is why this one is written out here.

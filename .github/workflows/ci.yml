@@ -9,6 +9,7 @@ on:
       - '.github/workflows/**'
       - 'Cargo**'
       - 'src/**/*.rs'
+      - 'scripts/**'
 
   pull_request:
     branches:
@@ -24,3 +25,41 @@ jobs:
       runs-on: ubuntu-24.04-arm
       target: aarch64-unknown-linux-musl
       all-features: true
+
+  # `ci` runs --all-features, where `tls` is always on and therefore always wins
+  # the cfg arms in `install_default_provider`. The `tls-ring` arm, the
+  # provider-less `query` dependency graph, and `check-features.sh` are reachable
+  # only under narrower feature sets, so they are covered here or not at all.
+  features:
+    name: Feature Combinations
+    runs-on: ubuntu-24.04-arm
+
+    env:
+      TARGET: aarch64-unknown-linux-musl
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Update and Configure Rust
+        run: |
+          rustup update
+          rustup component add clippy
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+          rustup target add "$TARGET"
+
+      - name: Cache Cargo
+        uses: Swatinem/rust-cache@f0d9c3887740aee45f6153b24b3a6b815192ec16 # v2
+
+      - name: Build, Test & Lint Feature Combinations
+        run: |
+          for features in query tls-ring query,tls-ring; do
+            echo "::group::$features"
+            cargo build --target "$TARGET" --no-default-features --features "$features"
+            cargo test --target "$TARGET" --no-default-features --features "$features"
+            cargo clippy --target "$TARGET" --all-targets --no-default-features --features "$features" -- -D warnings
+            echo "::endgroup::"
+          done
+
+      - name: Check Feature Graph
+        run: ./scripts/check-features.sh
