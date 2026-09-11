@@ -23,14 +23,23 @@ const MAX_ERROR_BODY_LEN: usize = 1024;
 /// 90s pool idle timeout, a per-host connection limit of 10, and gzip decompression.
 ///
 /// **A `rustls` crypto provider must be installed before the first call.**
-/// This crate's reqwest build pins none, so the application chooses: enable
-/// `tls` or `tls-ring` and call `tls::install_default_provider`, which
-/// `lambda::run` already does for Lambda binaries. Without one, building the
-/// client panics rather than the build failing.
+/// This crate's reqwest build pins none, so the application chooses. Enabling
+/// `tls` or `tls-ring` is that choice, and this installs it on the first call;
+/// a provider the application installed itself is left alone. With neither
+/// feature the application must install one before calling this, or building
+/// the client panics rather than the build failing.
 pub fn http_client() -> Result<&'static Client> {
     if let Some(client) = HTTP_CLIENT.get() {
         return Ok(client);
     }
+
+    // reqwest's `rustls-no-provider` build panics inside `build()` when no
+    // provider is installed, which would step over the error this function
+    // returns. Enabling a TLS feature is the application naming its provider,
+    // so honor it here rather than leaving a panic where a `Result` belongs.
+    #[cfg(any(feature = "tls", feature = "tls-ring"))]
+    crate::tls::install_default_provider();
+
     let client = Client::builder()
         .timeout(Duration::from_secs(30))
         .connect_timeout(Duration::from_secs(10))

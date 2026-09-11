@@ -40,7 +40,7 @@ Returns a shared singleton `reqwest::Client` configured with:
 - 90s pool idle timeout, max 10 idle connections per host
 - gzip decompression enabled
 
-The client pins no `rustls` crypto provider, so a consumer chooses one: enable `tls` or `tls-ring` and call `tls::install_default_provider` before the first call — `query::http_client` panics without one.
+The client pins no `rustls` crypto provider, so a consumer chooses one by enabling `tls` or `tls-ring`; `http_client` installs that provider on its first call, leaving alone one the application installed itself. With neither feature, install a provider before the first call — `query::http_client` panics without one.
 
 ### Request with retry (`query::send`) — feature `query`
 
