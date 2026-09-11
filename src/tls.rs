@@ -3,11 +3,9 @@
 /// Installs the process-wide `rustls` crypto provider.
 ///
 /// Which provider depends on the enabled feature: `tls` installs `aws-lc-rs`,
-/// `tls-ring` installs `ring`, and `tls` wins when both are on. `rustls`
-/// refuses to build a TLS connection when more than one provider is compiled
-/// in and none has been chosen, which surfaces as a runtime failure on the
-/// first HTTPS request rather than at build time. Calling this before any TLS
-/// work removes that failure mode.
+/// `tls-ring` installs `ring`, and `tls` wins when both are on. Without a
+/// provider installed, building an HTTPS client panics rather than the build
+/// failing. Calling this before any TLS work removes that failure mode.
 ///
 /// Safe to call repeatedly and from anywhere: if a provider is already
 /// installed, this leaves it alone. [`crate::lambda::run`] calls it for you;

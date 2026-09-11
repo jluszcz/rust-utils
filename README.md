@@ -31,7 +31,7 @@ async fn main() -> Result<(), lambda_runtime::Error> {
 
 ### TLS provider (`tls::install_default_provider`) — features `tls`, `tls-ring`
 
-Installs the process-wide `rustls` crypto provider. Without one, building an HTTPS client panics at runtime rather than the build failing. `tls` installs `aws-lc-rs`; `tls-ring` installs `ring`, which avoids compiling C. `tls` wins when both are enabled. Idempotent. `lambda::run` calls it (the `lambda` feature implies `tls`); every other binary calls it at the top of `main`, including one that takes `query` without `lambda`.
+Installs the process-wide `rustls` crypto provider. Without one, building an HTTPS client panics at runtime rather than the build failing. `tls` installs `aws-lc-rs`; `tls-ring` installs `ring`, a smaller build that needs no CMake. `tls` wins when both are enabled. Idempotent. `lambda::run` calls it (the `lambda` feature implies `tls`); every other binary calls it at the top of `main`, including one that takes `query` without `lambda`.
 
 ### HTTP client (`query::http_client`) — feature `query`
 
@@ -84,5 +84,5 @@ Prompt construction and cleanup of the reply stay with the caller — those are 
 | `aws` | Shared AWS SDK configuration |
 | `bedrock` | Bedrock Converse client (implies `aws`) |
 | `tls` | `rustls` crypto provider installation (`aws-lc-rs`) |
-| `tls-ring` | The same, on `ring` — no C compilation |
+| `tls-ring` | The same, on `ring` — a smaller build, no CMake |
 | `lambda` | Lambda entry point (implies `tls`) |
