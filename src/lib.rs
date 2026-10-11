@@ -1,6 +1,7 @@
-//! Small utilities shared across personal Rust projects: logging setup, an
-//! AWS Lambda entry point, and (behind the `query` feature) an HTTP query
-//! helper with an on-disk response cache.
+//! Small utilities shared across personal Rust projects: logging setup and,
+//! behind opt-in features, an HTTP query helper with an on-disk response
+//! cache, a shared clap verbosity argument, AWS and Bedrock helpers, and an
+//! AWS Lambda entry point.
 #![warn(missing_docs)]
 
 use anyhow::Result;
@@ -78,8 +79,8 @@ impl From<Verbosity> for LevelFilter {
 /// `calling_module` is normally `module_path!()` from the caller.
 ///
 /// Calling this more than once is harmless: the second and later calls are
-/// ignored rather than failing, so tests and Lambda cold starts can both call it
-/// freely.
+/// ignored rather than failing, so tests (many per process) and entry points
+/// that may run start-up code more than once can both call it freely.
 ///
 /// # Errors
 ///

@@ -3,7 +3,7 @@ name = "jluszcz_rust_utils"
 authors = ["Jacob Luszcz"]
 version = "0.1.0"
 edition = "2024"
-description = "Common utilities for Jacob Luszcz's Rust Lambdas: logging setup, an HTTP GET helper with retry, and a simple file-based cache."
+description = "Common utilities for Jacob Luszcz's Rust projects: logging setup, an HTTP GET helper with retry, and a simple file-based cache."
 license = "MIT"
 repository = "https://github.com/jluszcz/rust-utils"
 

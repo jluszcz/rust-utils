@@ -16,16 +16,16 @@ These are the commands CI runs. The `aarch64-unknown-linux-musl` target is **not
 nothing in this repo (no `rust-toolchain.toml`, no `.cargo/config.toml`) declares it — run `rustup target add
 aarch64-unknown-linux-musl` first if you need to reproduce a CI failure locally.
 
-- `cargo build --target aarch64-unknown-linux-musl --all-features` - Build for ARM64 Linux (Lambda target)
+- `cargo build --target aarch64-unknown-linux-musl --all-features` - Build for ARM64 Linux (CI target, also the Lambda runtime)
 - `cargo test --target aarch64-unknown-linux-musl --all-features` - Test on target platform
 - `cargo clippy --target aarch64-unknown-linux-musl --all-targets --all-features -- -D warnings` - Lint for target platform
 
 ## Architecture
 
-This is a Rust utilities library (`jluszcz_rust_utils`) designed for AWS Lambda functions. The codebase provides:
+This is a Rust utilities library (`jluszcz_rust_utils`) shared across Rust projects (CLIs, services, and AWS Lambda functions). The codebase provides:
 
 ### Core Components
-- **Logger setup** (`set_up_logger` in `lib.rs`) - Configures structured logging with timestamp formatting for Lambda environments; logs the rustc version once configured
+- **Logger setup** (`set_up_logger` in `lib.rs`) - Configures structured logging with timestamp formatting suited to Lambda and other log-collecting environments; logs the rustc version once configured
 - **Lambda initialization** (`lambda::init`) - Thin wrapper around `set_up_logger` that accepts `impl Into<Verbosity>`
 - **Lambda entry point** (`lambda::run`, feature `lambda`) - Installs the TLS provider, sets up logging once at cold start, and serves the handler
 - **HTTP + cache** (`query`, `cache`; feature `query`) - Shared client, retry with body-carrying errors, on-disk cache, typed JSON variants of both
@@ -48,7 +48,7 @@ Features are additive and default-off. Consumers track this crate as an unpinned
 
 ### Build System
 - Uses `build.rs` to capture rustc version at build time via `RUSTC_VERSION` environment variable
-- CI builds against `aarch64-unknown-linux-musl` (ARM64 Lambda runtime); the target is selected by the CI workflow,
+- CI builds against `aarch64-unknown-linux-musl` (ARM64 Lambda runtime, which the sibling Lambda repos deploy to); the target is selected by the CI workflow,
   not by anything checked into this repo
 
 ### Documentation

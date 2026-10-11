@@ -12,7 +12,7 @@ pub const DEFAULT_MAX_ATTEMPTS: u32 = 3;
 ///
 /// `region` overrides the region that would otherwise be resolved from the
 /// environment or profile — pass `None` to accept the ambient one, which is
-/// what a Lambda always wants.
+/// what a Lambda, or any host with ambient credentials, wants.
 ///
 /// The retry policy is the reason to prefer this over building a
 /// `ConfigLoader` directly: the SDK applies none unless asked, so every caller

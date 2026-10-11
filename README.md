@@ -1,6 +1,6 @@
 # rust-utils
 
-Common utilities for Rust Lambdas
+Common utilities shared across Rust projects: CLIs, services, and AWS Lambda functions
 
 ## Status
 
@@ -31,7 +31,7 @@ async fn main() -> Result<(), lambda_runtime::Error> {
 
 ### TLS provider (`tls::install_default_provider`) — feature `tls`
 
-Installs `aws-lc-rs` as the process-wide `rustls` crypto provider, which otherwise fails on the first HTTPS request rather than at build time. Idempotent. `lambda::run` calls it (the `lambda` feature implies `tls`); non-Lambda binaries call it at the top of `main`.
+Installs `aws-lc-rs` as the process-wide `rustls` crypto provider, which otherwise fails on the first HTTPS request rather than at build time. Idempotent. `lambda::run` calls it (the `lambda` feature implies `tls`); binaries that aren't Lambdas call it at the top of `main`.
 
 ### HTTP client (`query::http_client`) — feature `query`
 
@@ -64,7 +64,7 @@ A flattenable clap argument providing the repeatable `-v` flag, converting into 
 
 ### AWS configuration (`aws::config`) — feature `aws`
 
-Loads the ambient AWS configuration with `BehaviorVersion::latest()` and a standard retry policy (3 attempts; `aws::config_with_max_attempts` raises it for long batch work). Takes an optional region override, for CLIs that accept `--region`; pass `None` in a Lambda to accept the ambient one. The SDK applies no retries unless asked, which is the reason to route configuration through here.
+Loads the ambient AWS configuration with `BehaviorVersion::latest()` and a standard retry policy (3 attempts; `aws::config_with_max_attempts` raises it for long batch work). Takes an optional region override, for CLIs that accept `--region`; pass `None` to accept the ambient one, as in a Lambda or any other environment with configured credentials. The SDK applies no retries unless asked, which is the reason to route configuration through here.
 
 ### Bedrock text generation (`bedrock::BedrockClient`) — feature `bedrock`
 
@@ -76,7 +76,7 @@ Prompt construction and cleanup of the reply stay with the caller — those are 
 
 | Feature | Adds |
 |---------|------|
-| *(default)* | Logging, Lambda init |
+| *(default)* | Logging, Lambda init helper |
 | `query` | HTTP client, HTTP GET with retry, file-based cache |
 | `cli` | Shared clap verbosity argument |
 | `aws` | Shared AWS SDK configuration |
