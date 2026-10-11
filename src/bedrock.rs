@@ -43,7 +43,7 @@ impl BedrockClient {
     /// [`from_env`](Self::from_env), but `None` when AWS credentials aren't
     /// configured.
     ///
-    /// For binaries that run both credentialed (in Lambda) and not (on a
+    /// For binaries that run both credentialed (deployed) and not (on a
     /// developer's machine), where the uncredentialed case is ordinary rather
     /// than an error worth reporting.
     pub async fn from_env_if_credentialed() -> Option<Self> {
@@ -93,7 +93,7 @@ impl BedrockClient {
 
     /// [`generate`](Self::generate) abandoned after `timeout`.
     ///
-    /// For callers on a deadline of their own — a Lambda that still has to
+    /// For callers on a deadline of their own — a service or Lambda that still has to
     /// render a response — where a slow model should lose to the fallback
     /// rather than blow the budget.
     pub async fn generate_with_timeout(&self, prompt: &str, timeout: Duration) -> Result<String> {

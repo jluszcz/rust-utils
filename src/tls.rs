@@ -9,7 +9,7 @@
 ///
 /// Safe to call repeatedly and from anywhere: if a provider is already
 /// installed, this leaves it alone. [`crate::lambda::run`] calls it for you;
-/// binaries that aren't Lambdas should call it themselves at the top of `main`.
+/// other binaries should call it themselves at the top of `main`.
 pub fn install_default_provider() {
     let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
 }
