@@ -16,7 +16,7 @@ use std::future::Future;
 use std::time::Duration;
 
 /// Model used when [`MODEL_ID_VAR`] is unset.
-pub const DEFAULT_MODEL_ID: &str = "us.amazon.nova-2-lite-v1:0";
+pub const DEFAULT_MODEL_ID: &str = "us.anthropic.claude-haiku-5-5";
 
 /// Environment variable overriding [`DEFAULT_MODEL_ID`], so a model can be
 /// swapped per deployment without a rebuild.
@@ -124,11 +124,14 @@ fn resolve_model_id(override_id: Option<String>) -> String {
     override_id.unwrap_or_else(|| DEFAULT_MODEL_ID.to_owned())
 }
 
+/// The first text block of the reply.
+///
+/// Not simply the first block: models that think by default (Claude Haiku 5.5
+/// among them) lead with a reasoning block, even when its text is omitted.
 fn extract_text(output: Option<&ConverseOutput>) -> Result<String> {
     output
         .and_then(|o| o.as_message().ok())
-        .and_then(|m| m.content().first())
-        .and_then(|b| b.as_text().ok())
+        .and_then(|m| m.content().iter().find_map(|b| b.as_text().ok()))
         .map(String::to_owned)
         .ok_or_else(|| anyhow!("Unexpected Bedrock response structure"))
 }
@@ -150,6 +153,7 @@ mod tests {
     use aws_sdk_bedrockruntime::config::{Credentials, SharedCredentialsProvider};
     use aws_sdk_bedrockruntime::types::{
         CachePointBlock, CachePointType, ContentBlock, ConversationRole, ConverseOutput, Message,
+        ReasoningContentBlock, ReasoningTextBlock,
     };
 
     fn message_output(blocks: Vec<ContentBlock>) -> ConverseOutput {
@@ -195,10 +199,27 @@ mod tests {
     }
 
     #[test]
-    fn test_extract_text_rejects_non_text_leading_block() {
-        // A well-formed response whose leading block isn't text, so there's no
-        // reply to hand back. (A content-free Message isn't representable —
-        // the SDK builder rejects it.)
+    fn test_extract_text_skips_leading_reasoning_block() {
+        // Thinking models put their (possibly omitted) reasoning ahead of the reply.
+        let reasoning = ReasoningContentBlock::ReasoningText(
+            ReasoningTextBlock::builder()
+                .text("")
+                .build()
+                .expect("reasoning builds"),
+        );
+        let output = message_output(vec![
+            ContentBlock::ReasoningContent(reasoning),
+            ContentBlock::Text("a summary".to_string()),
+        ]);
+
+        assert_eq!(extract_text(Some(&output)).unwrap(), "a summary");
+    }
+
+    #[test]
+    fn test_extract_text_rejects_response_without_text_block() {
+        // A well-formed response with no text block, so there's no reply to
+        // hand back. (A content-free Message isn't representable — the SDK
+        // builder rejects it.)
         let output = message_output(vec![ContentBlock::CachePoint(
             CachePointBlock::builder()
                 .r#type(CachePointType::Default)
