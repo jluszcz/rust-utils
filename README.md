@@ -68,7 +68,7 @@ Loads the ambient AWS configuration with `BehaviorVersion::latest()` and a stand
 
 ### Bedrock text generation (`bedrock::BedrockClient`) — feature `bedrock`
 
-Sends a single-turn prompt through the Bedrock Converse API and returns the model's reply verbatim. The model is `us.amazon.nova-2-lite-v1:0` unless `BEDROCK_MODEL_ID` overrides it.
+Sends a single-turn prompt through the Bedrock Converse API and returns the model's reply verbatim. The model is `bedrock::DEFAULT_MODEL_ID` unless `BEDROCK_MODEL_ID` overrides it.
 
 Prompt construction and cleanup of the reply stay with the caller — those are the parts that differ per application. Construct with `from_env`, or `from_env_if_credentialed` to get `None` rather than per-call failures on a machine without AWS credentials. `generate_with_timeout` bounds the call for callers on a deadline of their own.
 
